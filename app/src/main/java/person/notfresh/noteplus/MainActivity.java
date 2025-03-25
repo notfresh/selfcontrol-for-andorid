@@ -435,7 +435,7 @@ public class MainActivity extends AppCompatActivity {
     }
 
     /**
-     * 加载已有记录
+     * 加载已有记录，并添加长按删除功能
      */
     private void loadMoments() {
         SQLiteDatabase db = dbHelper.getReadableDatabase();
@@ -452,7 +452,7 @@ public class MainActivity extends AppCompatActivity {
 
         adapter = new SimpleCursorAdapter(
                 this,
-                R.layout.note_list_item, // 使用已有的布局
+                R.layout.note_list_item,
                 cursor,
                 from,
                 to,
@@ -485,6 +485,12 @@ public class MainActivity extends AppCompatActivity {
         });
 
         momentsListView.setAdapter(adapter);
+        
+        // 添加长按监听器
+        momentsListView.setOnItemLongClickListener((parent, view, position, id) -> {
+            showDeleteConfirmDialog(id);
+            return true; // 返回true表示消费了长按事件
+        });
     }
     
     /**
@@ -1429,5 +1435,69 @@ public class MainActivity extends AppCompatActivity {
         // 更新按钮图标
         ((ImageButton)findViewById(R.id.expandButton)).setImageResource(
             isInputExpanded ? R.drawable.ic_collapse : R.drawable.ic_expand);
+    }
+
+    /**
+     * 显示删除确认对话框
+     * @param noteId 要删除的记录ID
+     */
+    private void showDeleteConfirmDialog(long noteId) {
+        AlertDialog.Builder builder = new AlertDialog.Builder(this);
+        builder.setTitle("删除记录");
+        builder.setMessage("确定要删除这条记录吗？此操作不可恢复。");
+        
+        builder.setPositiveButton("删除", (dialog, which) -> {
+            deleteNote(noteId);
+        });
+        
+        builder.setNegativeButton("取消", null);
+        builder.show();
+    }
+
+    /**
+     * 删除记录
+     * @param noteId 要删除的记录ID
+     */
+    private void deleteNote(long noteId) {
+        SQLiteDatabase db = dbHelper.getWritableDatabase();
+        
+        // 开始事务
+        db.beginTransaction();
+        try {
+            // 1. 删除相关的标签关联
+            db.delete(
+                NoteDbHelper.TABLE_NOTE_TAGS,
+                NoteDbHelper.COLUMN_RECORD_ID + " = ?",
+                new String[]{String.valueOf(noteId)}
+            );
+            
+            // 2. 删除相关的时间范围
+            db.delete(
+                NoteDbHelper.TABLE_TIME_RANGES,
+                NoteDbHelper.COLUMN_NOTE_ID + " = ?",
+                new String[]{String.valueOf(noteId)}
+            );
+            
+            // 3. 删除记录本身
+            int rowsDeleted = db.delete(
+                NoteDbHelper.TABLE_NOTES,
+                "_id = ?",
+                new String[]{String.valueOf(noteId)}
+            );
+            
+            // 设置事务成功
+            db.setTransactionSuccessful();
+            
+            // 显示删除成功提示
+            if (rowsDeleted > 0) {
+                Toast.makeText(this, "记录已删除", Toast.LENGTH_SHORT).show();
+                
+                // 刷新列表
+                loadMoments();
+            }
+        } finally {
+            // 结束事务
+            db.endTransaction();
+        }
     }
 } 
