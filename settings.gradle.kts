@@ -19,6 +19,6 @@ dependencyResolutionManagement {
     }
 }
 
-rootProject.name = "NotePlus"
+rootProject.name = "NotePlusV2"
 include(":app")
  

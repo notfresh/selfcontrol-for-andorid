@@ -7,7 +7,7 @@ android {
     compileSdk = 34
 
     defaultConfig {
-        applicationId = "person.notfresh.noteplus"
+        applicationId = "person.notfresh.noteplusv2"
         minSdk = 29
         targetSdk = 34
         versionCode = 1
@@ -35,12 +35,12 @@ android {
 }
 
 dependencies {
-
-    implementation(libs.appcompat)
+    implementation("androidx.appcompat:appcompat:1.6.1")
     implementation(libs.material)
     implementation(libs.constraintlayout)
     implementation(libs.navigation.fragment)
     implementation(libs.navigation.ui)
+    implementation("com.google.android.material:material:1.11.0")
     testImplementation(libs.junit)
     androidTestImplementation(libs.ext.junit)
     androidTestImplementation(libs.espresso.core)

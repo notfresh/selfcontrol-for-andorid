@@ -1,15 +1,25 @@
 <?xml version="1.0" encoding="utf-8"?>
 <menu xmlns:android="http://schemas.android.com/apk/res/android"
       xmlns:app="http://schemas.android.com/apk/res-auto">
+    
+    
     <item
         android:id="@+id/action_switch_project"
         android:title="切换项目"
         android:icon="@drawable/ic_projects"
         app:showAsAction="always" />
-        
+
+    <item
+        android:id="@+id/action_settings"
+        android:title="项目设置"
+        android:icon="@drawable/ic_settings"
+        app:showAsAction="ifRoom" />
+
     <item
         android:id="@+id/action_export_data"
         android:title="导出数据"
         android:icon="@drawable/ic_export"
         app:showAsAction="ifRoom" />
+        
+    
 </menu> 

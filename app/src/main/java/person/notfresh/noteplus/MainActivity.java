@@ -40,6 +40,7 @@ import androidx.core.content.FileProvider;
 
 import com.google.android.material.chip.Chip;
 import com.google.android.material.chip.ChipGroup;
+import android.widget.Switch;
 
 import org.json.JSONArray;
 import org.json.JSONException;
@@ -382,6 +383,14 @@ public class MainActivity extends AppCompatActivity {
             return;
         }
 
+        
+        // 检查是否开启了时间范围必填
+        String timeRangeRequired = dbHelper.getSetting(NoteDbHelper.KEY_TIME_RANGE_REQUIRED, "false");
+        if (Boolean.parseBoolean(timeRangeRequired) && !hasTimeRange) {
+            Toast.makeText(this, "请设置开始和结束时间", Toast.LENGTH_SHORT).show();
+            return;
+        }
+
         // 检查时间区间的有效性
         if (hasTimeRange) {
             if (startCalendar.getTimeInMillis() >= endCalendar.getTimeInMillis()) {
@@ -530,8 +539,8 @@ public class MainActivity extends AppCompatActivity {
         Cursor timeRangeCursor = dbHelper.getTimeRangesForNote(noteId);
         
         if (timeRangeCursor != null && timeRangeCursor.moveToFirst()) {
-            long startTime = timeRangeCursor.getLong(timeRangeCursor.getColumnIndex(NoteDbHelper.COLUMN_START_TIME));
-            long endTime = timeRangeCursor.getLong(timeRangeCursor.getColumnIndex(NoteDbHelper.COLUMN_END_TIME));
+            @SuppressLint("Range") long startTime = timeRangeCursor.getLong(timeRangeCursor.getColumnIndex(NoteDbHelper.COLUMN_START_TIME));
+            @SuppressLint("Range") long endTime = timeRangeCursor.getLong(timeRangeCursor.getColumnIndex(NoteDbHelper.COLUMN_END_TIME));
             
             LinearLayout timeRangeLayout = new LinearLayout(this);
             timeRangeLayout.setOrientation(LinearLayout.HORIZONTAL);
@@ -575,8 +584,8 @@ public class MainActivity extends AppCompatActivity {
             tagsContainer.setOrientation(LinearLayout.HORIZONTAL);
             
             while (tagsCursor.moveToNext()) {
-                String tagName = tagsCursor.getString(tagsCursor.getColumnIndex(NoteDbHelper.COLUMN_TAG_NAME));
-                String tagColor = tagsCursor.getString(tagsCursor.getColumnIndex(NoteDbHelper.COLUMN_TAG_COLOR));
+                @SuppressLint("Range") String tagName = tagsCursor.getString(tagsCursor.getColumnIndex(NoteDbHelper.COLUMN_TAG_NAME));
+                @SuppressLint("Range") String tagColor = tagsCursor.getString(tagsCursor.getColumnIndex(NoteDbHelper.COLUMN_TAG_COLOR));
                 
                 TextView tagView = new TextView(this);
                 tagView.setText(tagName);
@@ -673,6 +682,9 @@ public class MainActivity extends AppCompatActivity {
             return true;
         } else if (id == R.id.action_export_data) {
             showExportDialog();
+            return true;
+        } else if (id == R.id.action_settings) {
+            showSettingsDialog();
             return true;
         }
         
@@ -1499,5 +1511,34 @@ public class MainActivity extends AppCompatActivity {
             // 结束事务
             db.endTransaction();
         }
+    }
+
+    /**
+     * 显示项目设置对话框
+     */
+    private void showSettingsDialog() {
+        AlertDialog.Builder builder = new AlertDialog.Builder(this);
+        builder.setTitle("项目设置");
+        
+        // 创建设置项目布局
+        View settingsView = getLayoutInflater().inflate(R.layout.dialog_settings, null);
+        builder.setView(settingsView);
+        
+        // 初始化时间范围必填开关 - 使用Switch而不是SwitchCompat
+        Switch timeRangeRequiredSwitch = settingsView.findViewById(R.id.switchTimeRangeRequired);
+        String currentValue = dbHelper.getSetting(NoteDbHelper.KEY_TIME_RANGE_REQUIRED, "false");
+        timeRangeRequiredSwitch.setChecked(Boolean.parseBoolean(currentValue));
+        
+        // 保存按钮
+        builder.setPositiveButton("保存", (dialog, which) -> {
+            boolean isRequired = timeRangeRequiredSwitch.isChecked();
+            dbHelper.saveSetting(NoteDbHelper.KEY_TIME_RANGE_REQUIRED, String.valueOf(isRequired));
+            Toast.makeText(this, "设置已保存", Toast.LENGTH_SHORT).show();
+        });
+        
+        // 取消按钮
+        builder.setNegativeButton("取消", null);
+        
+        builder.show();
     }
 } 

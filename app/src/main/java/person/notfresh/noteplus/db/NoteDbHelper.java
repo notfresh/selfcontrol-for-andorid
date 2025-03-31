@@ -8,7 +8,7 @@ import android.content.ContentValues;
 
 public class NoteDbHelper extends SQLiteOpenHelper {
     private static final String DATABASE_NAME = "notes.db";
-    private static final int DATABASE_VERSION = 2;
+    private static final int DATABASE_VERSION = 3;
 
     public static final String TABLE_NOTES = "notes";
     public static final String COLUMN_ID = "_id";
@@ -18,6 +18,7 @@ public class NoteDbHelper extends SQLiteOpenHelper {
     public static final String TABLE_TAGS = "tags";
     public static final String TABLE_TIME_RANGES = "time_ranges";
     public static final String TABLE_NOTE_TAGS = "note_tags";
+    public static final String TABLE_SETTINGS = "settings";
 
     public static final String COLUMN_TAG_ID = "tag_id";
     public static final String COLUMN_TAG_NAME = "tag_name";
@@ -29,6 +30,10 @@ public class NoteDbHelper extends SQLiteOpenHelper {
     public static final String COLUMN_END_TIME = "end_time";
 
     public static final String COLUMN_RECORD_ID = "record_id";
+    public static final String COLUMN_SETTING_KEY = "key";
+    public static final String COLUMN_SETTING_VALUE = "value";
+
+    public static final String KEY_TIME_RANGE_REQUIRED = "time_range_required";
 
     private static final String DATABASE_CREATE = "create table "
             + TABLE_NOTES + "(" 
@@ -70,18 +75,44 @@ public class NoteDbHelper extends SQLiteOpenHelper {
                 + "FOREIGN KEY (" + COLUMN_TAG_ID + ") REFERENCES " + TABLE_TAGS + "(" + COLUMN_TAG_ID + ") ON DELETE CASCADE"
                 + ")";
         
+        String CREATE_SETTINGS_TABLE = "CREATE TABLE " + TABLE_SETTINGS + "("
+                + COLUMN_SETTING_KEY + " TEXT PRIMARY KEY,"
+                + COLUMN_SETTING_VALUE + " TEXT NOT NULL"
+                + ")";
+        
         database.execSQL(CREATE_TAGS_TABLE);
         database.execSQL(CREATE_TIME_RANGES_TABLE);
         database.execSQL(CREATE_NOTE_TAGS_TABLE);
+        database.execSQL(CREATE_SETTINGS_TABLE);
+        
+        ContentValues defaultSettings = new ContentValues();
+        defaultSettings.put(COLUMN_SETTING_KEY, KEY_TIME_RANGE_REQUIRED);
+        defaultSettings.put(COLUMN_SETTING_VALUE, "false");
+        database.insert(TABLE_SETTINGS, null, defaultSettings);
     }
 
     @Override
     public void onUpgrade(SQLiteDatabase db, int oldVersion, int newVersion) {
-        db.execSQL("DROP TABLE IF EXISTS " + TABLE_NOTES);
-        db.execSQL("DROP TABLE IF EXISTS " + TABLE_NOTE_TAGS);
-        db.execSQL("DROP TABLE IF EXISTS " + TABLE_TIME_RANGES);
-        db.execSQL("DROP TABLE IF EXISTS " + TABLE_TAGS);
-        onCreate(db);
+        if (oldVersion < 3) {
+            String CREATE_SETTINGS_TABLE = "CREATE TABLE IF NOT EXISTS " + TABLE_SETTINGS + "("
+                    + COLUMN_SETTING_KEY + " TEXT PRIMARY KEY,"
+                    + COLUMN_SETTING_VALUE + " TEXT NOT NULL"
+                    + ")";
+            db.execSQL(CREATE_SETTINGS_TABLE);
+            
+            ContentValues defaultSettings = new ContentValues();
+            defaultSettings.put(COLUMN_SETTING_KEY, KEY_TIME_RANGE_REQUIRED);
+            defaultSettings.put(COLUMN_SETTING_VALUE, "false");
+            
+            try {
+                db.insert(TABLE_SETTINGS, null, defaultSettings);
+            } catch (Exception e) {
+                // 如果插入失败(比如记录已存在)，不处理异常
+            }
+        }
+        
+        // 可以在这里添加从其他版本升级的代码，比如：
+        // if (oldVersion < 4) { ... }
     }
 
     public Cursor getAllTags() {
@@ -151,5 +182,48 @@ public class NoteDbHelper extends SQLiteOpenHelper {
                 null, null, null, null,
                 COLUMN_TIMESTAMP + " DESC"
         );
+    }
+
+    /**
+     * 获取设置值
+     */
+    public String getSetting(String key, String defaultValue) {
+        SQLiteDatabase db = this.getReadableDatabase();
+        String value = defaultValue;
+        
+        Cursor cursor = db.query(
+                TABLE_SETTINGS,
+                new String[]{COLUMN_SETTING_VALUE},
+                COLUMN_SETTING_KEY + "=?",
+                new String[]{key},
+                null, null, null);
+        
+        if (cursor.moveToFirst()) {
+            value = cursor.getString(0);
+        }
+        cursor.close();
+        
+        return value;
+    }
+
+    /**
+     * 保存设置值
+     */
+    public void saveSetting(String key, String value) {
+        SQLiteDatabase db = this.getWritableDatabase();
+        
+        ContentValues values = new ContentValues();
+        values.put(COLUMN_SETTING_VALUE, value);
+        
+        int rows = db.update(
+                TABLE_SETTINGS,
+                values,
+                COLUMN_SETTING_KEY + "=?",
+                new String[]{key});
+        
+        if (rows == 0) {
+            values.put(COLUMN_SETTING_KEY, key);
+            db.insert(TABLE_SETTINGS, null, values);
+        }
     }
 } 
