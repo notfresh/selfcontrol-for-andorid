@@ -118,6 +118,10 @@ public class MainActivity extends AppCompatActivity {
     // 添加输入框展开/收起功能
     private boolean isInputExpanded = false;
 
+    // 添加花费输入框
+    private EditText costEditText;
+    private boolean showCost = true; // 默认显示花费
+
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -159,6 +163,9 @@ public class MainActivity extends AppCompatActivity {
         
         // 设置添加标签按钮点击事件
         addTagButton.setOnClickListener(v -> showTagSelectionDialog());
+
+        // 初始化花费输入框
+        costEditText = findViewById(R.id.costEditText);
 
         // 加载现有记录
         loadMoments();
@@ -374,7 +381,22 @@ public class MainActivity extends AppCompatActivity {
     }
 
     /**
-     * 保存当前输入的时刻记录
+     * 加载设置配置
+     */
+    private void loadSettings() {
+        // 加载花费显示设置
+        showCost = Boolean.parseBoolean(dbHelper.getSetting(NoteDbHelper.KEY_COST_DISPLAY, "true"));
+        
+        // 根据设置决定是否显示花费输入框
+        if (!showCost) {
+            findViewById(R.id.costContainer).setVisibility(View.GONE);
+        } else {
+            findViewById(R.id.costContainer).setVisibility(View.VISIBLE);
+        }
+    }
+
+    /**
+     * 保存一条记录
      */
     private void saveMoment() {
         String content = momentEditText.getText().toString().trim();
@@ -390,42 +412,68 @@ public class MainActivity extends AppCompatActivity {
             Toast.makeText(this, "请设置开始和结束时间", Toast.LENGTH_SHORT).show();
             return;
         }
-
         // 检查时间区间的有效性
         if (hasTimeRange) {
             if (startCalendar.getTimeInMillis() >= endCalendar.getTimeInMillis()) {
                 Toast.makeText(this, "结束时间必须晚于开始时间", Toast.LENGTH_SHORT).show();
+            }
+        }
+        
+        // 检查花费必填配置
+        String costRequired = dbHelper.getSetting(NoteDbHelper.KEY_COST_REQUIRED, "false");
+        String costText = costEditText.getText().toString().trim();
+        if (Boolean.parseBoolean(costRequired) && costText.isEmpty()) {
+            Toast.makeText(this, "请输入花费金额", Toast.LENGTH_SHORT).show();
+            return;
+        }
+        
+        // 解析花费金额
+        double cost = 0.0;
+        if (!costText.isEmpty()) {
+            try {
+                cost = Double.parseDouble(costText);
+            } catch (NumberFormatException e) {
+                Toast.makeText(this, "花费金额格式不正确", Toast.LENGTH_SHORT).show();
                 return;
             }
         }
-
-        // 获取当前时间
-        long timestamp = System.currentTimeMillis();
-
-        // 保存到数据库
+        
         SQLiteDatabase db = dbHelper.getWritableDatabase();
-        ContentValues values = new ContentValues();
-        values.put(NoteDbHelper.COLUMN_CONTENT, content);
-        values.put(NoteDbHelper.COLUMN_TIMESTAMP, timestamp);
-
-        long newRowId = db.insert(NoteDbHelper.TABLE_NOTES, null, values);
-
-        if (newRowId != -1) {
-            // 保存时间区间(如果有)
+        
+        // 开始事务
+        db.beginTransaction();
+        try {
+            // 1. 保存笔记内容
+            ContentValues values = new ContentValues();
+            values.put(NoteDbHelper.COLUMN_CONTENT, content);
+            values.put(NoteDbHelper.COLUMN_TIMESTAMP, System.currentTimeMillis());
+            values.put(NoteDbHelper.COLUMN_COST, cost); // 保存花费金额
+            
+            long noteId = db.insert(NoteDbHelper.TABLE_NOTES, null, values);
+            
+            // 2. 如果设置了时间范围，保存时间范围
             if (hasTimeRange) {
-                dbHelper.saveTimeRange(newRowId, startCalendar.getTimeInMillis(), endCalendar.getTimeInMillis());
+                dbHelper.saveTimeRange(noteId, startCalendar.getTimeInMillis(), endCalendar.getTimeInMillis());
             }
             
-            // 保存标签关联
+            // 3. 保存关联的标签
             for (Tag tag : selectedTags) {
-                dbHelper.linkNoteToTag(newRowId, tag.getId());
+                dbHelper.linkNoteToTag(noteId, tag.getId());
             }
             
-            Toast.makeText(this, "记录已保存", Toast.LENGTH_SHORT).show();
-            clearForm(); // 清空表单
-            loadMoments(); // 重新加载列表
-        } else {
-            Toast.makeText(this, "保存失败，请重试", Toast.LENGTH_SHORT).show();
+            // 设置事务成功
+            db.setTransactionSuccessful();
+            
+            // 清空表单
+            clearForm();
+            
+            // 重新加载列表
+            loadMoments();
+            
+            Toast.makeText(this, "保存成功", Toast.LENGTH_SHORT).show();
+        } finally {
+            // 结束事务
+            db.endTransaction();
         }
     }
     
@@ -439,8 +487,11 @@ public class MainActivity extends AppCompatActivity {
         startCalendar = Calendar.getInstance();
         endCalendar = Calendar.getInstance();
         hasTimeRange = false;
-        tagChipGroup.removeAllViews();
+        costEditText.setText(""); // 清空花费输入框
+        
+        // 清空选中标签
         selectedTags.clear();
+        tagChipGroup.removeAllViews();
     }
 
     /**
@@ -450,7 +501,7 @@ public class MainActivity extends AppCompatActivity {
         SQLiteDatabase db = dbHelper.getReadableDatabase();
         Cursor cursor = db.query(
                 NoteDbHelper.TABLE_NOTES,
-                new String[]{"_id", NoteDbHelper.COLUMN_CONTENT, NoteDbHelper.COLUMN_TIMESTAMP},
+                new String[]{"_id", NoteDbHelper.COLUMN_CONTENT, NoteDbHelper.COLUMN_TIMESTAMP, NoteDbHelper.COLUMN_COST},
                 null, null, null, null,
                 NoteDbHelper.COLUMN_TIMESTAMP + " DESC"
         );
@@ -475,8 +526,11 @@ public class MainActivity extends AppCompatActivity {
                 Cursor cursor = (Cursor) getItem(position);
                 long noteId = cursor.getLong(cursor.getColumnIndexOrThrow("_id"));
                 
+                // 获取花费金额
+                double cost = cursor.getDouble(cursor.getColumnIndexOrThrow(NoteDbHelper.COLUMN_COST));
+                
                 // 为列表项添加时间区间和标签信息
-                updateListItemWithExtras(view, noteId);
+                updateListItemWithExtras(view, noteId, cost);
                 
                 return view;
             }
@@ -505,7 +559,7 @@ public class MainActivity extends AppCompatActivity {
     /**
      * 为列表项添加时间区间和标签信息
      */
-    private void updateListItemWithExtras(View view, long noteId) {
+    private void updateListItemWithExtras(View view, long noteId, double cost) {
         // 查找或创建额外信息容器
         LinearLayout extrasContainer = view.findViewById(R.id.extrasContainer);
         if (extrasContainer == null) {
@@ -530,6 +584,17 @@ public class MainActivity extends AppCompatActivity {
         
         // 添加标签信息
         addTagsInfo(extrasContainer, noteId);
+        
+        // 如果配置显示花费且花费大于0，则在记录旁边显示花费
+        if (showCost && cost > 0) {
+            // 获取内容文本视图
+            TextView contentText = view.findViewById(R.id.contentText);
+            String currentText = contentText.getText().toString();
+            
+            // 在文本后面添加花费信息
+            String costText = String.format(" [¥%.2f]", cost);
+            contentText.setText(currentText + costText);
+        }
     }
     
     /**
@@ -1524,15 +1589,46 @@ public class MainActivity extends AppCompatActivity {
         View settingsView = getLayoutInflater().inflate(R.layout.dialog_settings, null);
         builder.setView(settingsView);
         
-        // 初始化时间范围必填开关 - 使用Switch而不是SwitchCompat
+        // 初始化时间范围必填开关
         Switch timeRangeRequiredSwitch = settingsView.findViewById(R.id.switchTimeRangeRequired);
-        String currentValue = dbHelper.getSetting(NoteDbHelper.KEY_TIME_RANGE_REQUIRED, "false");
-        timeRangeRequiredSwitch.setChecked(Boolean.parseBoolean(currentValue));
+        String currentTimeValue = dbHelper.getSetting(NoteDbHelper.KEY_TIME_RANGE_REQUIRED, "false");
+        timeRangeRequiredSwitch.setChecked(Boolean.parseBoolean(currentTimeValue));
+        
+        // 初始化花费显示开关
+        Switch costDisplaySwitch = settingsView.findViewById(R.id.switchCostDisplay);
+        String currentCostDisplayValue = dbHelper.getSetting(NoteDbHelper.KEY_COST_DISPLAY, "true");
+        costDisplaySwitch.setChecked(Boolean.parseBoolean(currentCostDisplayValue));
+        
+        // 初始化花费必填开关
+        Switch costRequiredSwitch = settingsView.findViewById(R.id.switchCostRequired);
+        String currentCostRequiredValue = dbHelper.getSetting(NoteDbHelper.KEY_COST_REQUIRED, "false");
+        costRequiredSwitch.setChecked(Boolean.parseBoolean(currentCostRequiredValue));
         
         // 保存按钮
         builder.setPositiveButton("保存", (dialog, which) -> {
-            boolean isRequired = timeRangeRequiredSwitch.isChecked();
-            dbHelper.saveSetting(NoteDbHelper.KEY_TIME_RANGE_REQUIRED, String.valueOf(isRequired));
+            // 保存时间范围设置
+            boolean isTimeRangeRequired = timeRangeRequiredSwitch.isChecked();
+            dbHelper.saveSetting(NoteDbHelper.KEY_TIME_RANGE_REQUIRED, String.valueOf(isTimeRangeRequired));
+            
+            // 保存花费显示设置
+            boolean isCostDisplay = costDisplaySwitch.isChecked();
+            dbHelper.saveSetting(NoteDbHelper.KEY_COST_DISPLAY, String.valueOf(isCostDisplay));
+            
+            // 保存花费必填设置
+            boolean isCostRequired = costRequiredSwitch.isChecked();
+            dbHelper.saveSetting(NoteDbHelper.KEY_COST_REQUIRED, String.valueOf(isCostRequired));
+            
+            // 更新UI显示
+            showCost = isCostDisplay;
+            if (!showCost) {
+                findViewById(R.id.costContainer).setVisibility(View.GONE);
+            } else {
+                findViewById(R.id.costContainer).setVisibility(View.VISIBLE);
+            }
+            
+            // 重新加载记录列表以应用花费显示变更
+            loadMoments();
+            
             Toast.makeText(this, "设置已保存", Toast.LENGTH_SHORT).show();
         });
         

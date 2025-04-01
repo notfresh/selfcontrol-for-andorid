@@ -8,12 +8,13 @@ import android.content.ContentValues;
 
 public class NoteDbHelper extends SQLiteOpenHelper {
     private static final String DATABASE_NAME = "notes.db";
-    private static final int DATABASE_VERSION = 3;
+    private static final int DATABASE_VERSION = 4;
 
     public static final String TABLE_NOTES = "notes";
     public static final String COLUMN_ID = "_id";
     public static final String COLUMN_CONTENT = "content";
     public static final String COLUMN_TIMESTAMP = "timestamp";
+    public static final String COLUMN_COST = "cost";
 
     public static final String TABLE_TAGS = "tags";
     public static final String TABLE_TIME_RANGES = "time_ranges";
@@ -34,12 +35,15 @@ public class NoteDbHelper extends SQLiteOpenHelper {
     public static final String COLUMN_SETTING_VALUE = "value";
 
     public static final String KEY_TIME_RANGE_REQUIRED = "time_range_required";
+    public static final String KEY_COST_DISPLAY = "cost_display";
+    public static final String KEY_COST_REQUIRED = "cost_required";
 
     private static final String DATABASE_CREATE = "create table "
             + TABLE_NOTES + "(" 
             + COLUMN_ID + " integer primary key autoincrement, "
             + COLUMN_CONTENT + " text not null, "
-            + COLUMN_TIMESTAMP + " integer not null);";
+            + COLUMN_TIMESTAMP + " integer not null, "
+            + COLUMN_COST + " real default 0);";
 
     public NoteDbHelper(Context context, String databaseName) {
         super(context, databaseName, null, DATABASE_VERSION);
@@ -89,6 +93,16 @@ public class NoteDbHelper extends SQLiteOpenHelper {
         defaultSettings.put(COLUMN_SETTING_KEY, KEY_TIME_RANGE_REQUIRED);
         defaultSettings.put(COLUMN_SETTING_VALUE, "false");
         database.insert(TABLE_SETTINGS, null, defaultSettings);
+        
+        ContentValues costDisplaySettings = new ContentValues();
+        costDisplaySettings.put(COLUMN_SETTING_KEY, KEY_COST_DISPLAY);
+        costDisplaySettings.put(COLUMN_SETTING_VALUE, "true");
+        database.insert(TABLE_SETTINGS, null, costDisplaySettings);
+        
+        ContentValues costRequiredSettings = new ContentValues();
+        costRequiredSettings.put(COLUMN_SETTING_KEY, KEY_COST_REQUIRED);
+        costRequiredSettings.put(COLUMN_SETTING_VALUE, "false");
+        database.insert(TABLE_SETTINGS, null, costRequiredSettings);
     }
 
     @Override
@@ -111,8 +125,27 @@ public class NoteDbHelper extends SQLiteOpenHelper {
             }
         }
         
-        // 可以在这里添加从其他版本升级的代码，比如：
-        // if (oldVersion < 4) { ... }
+        if (oldVersion < 4) {
+            try {
+                db.execSQL("ALTER TABLE " + TABLE_NOTES + " ADD COLUMN " + COLUMN_COST + " REAL DEFAULT 0");
+            } catch (Exception e) {
+                // 如果字段已存在，忽略错误
+            }
+            
+            try {
+                ContentValues costDisplaySettings = new ContentValues();
+                costDisplaySettings.put(COLUMN_SETTING_KEY, KEY_COST_DISPLAY);
+                costDisplaySettings.put(COLUMN_SETTING_VALUE, "true");
+                db.insert(TABLE_SETTINGS, null, costDisplaySettings);
+                
+                ContentValues costRequiredSettings = new ContentValues();
+                costRequiredSettings.put(COLUMN_SETTING_KEY, KEY_COST_REQUIRED);
+                costRequiredSettings.put(COLUMN_SETTING_VALUE, "false");
+                db.insert(TABLE_SETTINGS, null, costRequiredSettings);
+            } catch (Exception e) {
+                // 忽略可能的重复插入错误
+            }
+        }
     }
 
     public Cursor getAllTags() {
