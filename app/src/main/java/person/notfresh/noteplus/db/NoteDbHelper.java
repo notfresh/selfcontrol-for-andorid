@@ -37,6 +37,7 @@ public class NoteDbHelper extends SQLiteOpenHelper {
     public static final String KEY_TIME_RANGE_REQUIRED = "time_range_required";
     public static final String KEY_COST_DISPLAY = "cost_display";
     public static final String KEY_COST_REQUIRED = "cost_required";
+    public static final String KEY_TIME_DESC_ORDER = "time_desc_order";
 
     private static final String DATABASE_CREATE = "create table "
             + TABLE_NOTES + "(" 
@@ -103,6 +104,11 @@ public class NoteDbHelper extends SQLiteOpenHelper {
         costRequiredSettings.put(COLUMN_SETTING_KEY, KEY_COST_REQUIRED);
         costRequiredSettings.put(COLUMN_SETTING_VALUE, "false");
         database.insert(TABLE_SETTINGS, null, costRequiredSettings);
+        
+        ContentValues timeDescOrderSettings = new ContentValues();
+        timeDescOrderSettings.put(COLUMN_SETTING_KEY, KEY_TIME_DESC_ORDER);
+        timeDescOrderSettings.put(COLUMN_SETTING_VALUE, "true");
+        database.insert(TABLE_SETTINGS, null, timeDescOrderSettings);
     }
 
     @Override

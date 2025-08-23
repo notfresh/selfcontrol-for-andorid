@@ -1,53 +1,5 @@
 package person.notfresh.noteplus;
 
-import android.annotation.SuppressLint;
-import android.app.DatePickerDialog;
-import android.app.ProgressDialog;
-import android.app.TimePickerDialog;
-import android.content.ContentValues;
-import android.content.Context;
-import android.database.Cursor;
-import android.database.sqlite.SQLiteDatabase;
-import android.graphics.Color;
-import android.net.Uri;
-import android.os.Build;
-import android.os.Bundle;
-import android.os.Environment;
-import android.provider.MediaStore;
-import android.provider.Settings;
-import android.util.Log;
-import android.view.LayoutInflater;
-import android.view.Menu;
-import android.view.MenuItem;
-import android.view.View;
-import android.view.ViewGroup;
-import android.view.inputmethod.EditorInfo;
-import android.widget.Button;
-import android.widget.EditText;
-import android.widget.ImageButton;
-import android.widget.LinearLayout;
-import android.widget.ListView;
-import android.widget.SimpleCursorAdapter;
-import android.widget.TextView;
-import android.widget.Toast;
-import android.widget.CheckBox;
-
-import androidx.appcompat.app.AlertDialog;
-import androidx.appcompat.app.AppCompatActivity;
-import androidx.appcompat.widget.PopupMenu;
-import androidx.appcompat.widget.Toolbar;
-import androidx.core.app.ActivityCompat;
-import androidx.core.content.ContextCompat;
-import androidx.core.content.FileProvider;
-
-import com.google.android.material.chip.Chip;
-import com.google.android.material.chip.ChipGroup;
-import android.widget.Switch;
-
-import org.json.JSONArray;
-import org.json.JSONException;
-import org.json.JSONObject;
-
 import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
@@ -63,74 +15,114 @@ import java.util.Random;
 import java.util.Set;
 import java.util.HashSet;
 
-import person.notfresh.noteplus.db.NoteDbHelper;
-import person.notfresh.noteplus.db.ProjectContextManager;
-import person.notfresh.noteplus.model.Tag;
+import android.annotation.SuppressLint;
+import android.app.DatePickerDialog;
+import android.app.ProgressDialog;
+import android.app.TimePickerDialog;
+import android.content.ContentValues;
+import android.content.Context;
+import android.database.Cursor;
+import android.database.sqlite.SQLiteDatabase;
+import android.graphics.Color;
+import android.net.Uri;
+import android.os.Build;
+import android.os.Bundle;
+import android.os.Environment;
+import android.provider.MediaStore;
+import android.provider.Settings;
+import android.view.Menu;
+import android.view.MenuItem;
+import android.view.View;
+import android.view.ViewGroup;
+import android.view.inputmethod.EditorInfo;
+import android.widget.Button;
+import android.widget.EditText;
+import android.widget.ImageButton;
+import android.widget.LinearLayout;
+import android.widget.ListView;
+import android.widget.SimpleCursorAdapter;
+import android.widget.TextView;
+import android.widget.Toast;
+import android.widget.CheckBox;
+import android.widget.Switch;
+
 import android.Manifest;
 import android.content.ActivityNotFoundException;
 import android.content.ContentResolver;
 import android.content.Intent;
 import android.content.pm.PackageManager;
-import android.net.Uri;
-import android.os.Environment;
-import android.provider.MediaStore;
 import androidx.annotation.NonNull;
+import android.view.inputmethod.InputMethodManager;
+
+import android.os.PowerManager;
+
+import androidx.appcompat.app.AlertDialog;
+import androidx.appcompat.app.AppCompatActivity;
+import androidx.appcompat.widget.PopupMenu;
+import androidx.appcompat.widget.Toolbar;
 import androidx.core.app.ActivityCompat;
 import androidx.core.content.ContextCompat;
+
+import com.google.android.material.chip.Chip;
+import com.google.android.material.chip.ChipGroup;
+
 import org.json.JSONArray;
+import org.json.JSONException;
 import org.json.JSONObject;
-import java.io.File;
-import java.io.FileOutputStream;
-import java.io.IOException;
-import java.io.OutputStream;
-import java.io.OutputStreamWriter;
-import android.view.inputmethod.InputMethodManager;
+
+
+import person.notfresh.noteplus.db.NoteDbHelper;
+import person.notfresh.noteplus.db.ProjectContextManager;
+import person.notfresh.noteplus.model.Tag;
+
 import person.notfresh.noteplus.util.NotificationHelper;
 import person.notfresh.noteplus.util.ReminderScheduler;
-import android.os.PowerManager;
-import android.widget.Spinner;
-import android.widget.ArrayAdapter;
+
 
 public class MainActivity extends AppCompatActivity {
-    private EditText momentEditText;
-    private Button saveButton;
-    private ListView momentsListView;
-    private NoteDbHelper dbHelper;
-    private SimpleCursorAdapter adapter;
-
-    // 新增视图引用
-    private TextView startTimeText;
-    private TextView endTimeText;
-    private Button addTagButton;
-    private ChipGroup tagChipGroup;
-    
-    // 新增数据状态
-    private List<Tag> selectedTags = new ArrayList<>();
-    private Calendar startCalendar = Calendar.getInstance();
-    private Calendar endCalendar = Calendar.getInstance();
-    private boolean hasTimeRange = false;
-
-    // 添加dialog作为成员变量
-    private AlertDialog tagSelectionDialog;
-
-    // 添加到类成员变量区域
-    private TimePickerDialog startTimeDialog;
-    private TimePickerDialog endTimeDialog;
-    private SimpleDateFormat timeFormat;
-
-    // 添加项目管理器
-    private ProjectContextManager projectManager;
-
     // 添加权限常量
     private static final int PERMISSION_REQUEST_WRITE_STORAGE = 1001;
     private static final int REQUEST_NOTIFICATION_PERMISSION = 1002;
 
     // 添加输入框展开/收起功能
     private boolean isInputExpanded = false;
+    private boolean showCost = true; // 默认显示花费
+    private boolean timeDescOrder = true; // 默认按时间逆序显示
 
+    private boolean isMultiSelectMode = false;
+    private Set<Long> selectedNoteIds = new HashSet<>();
+    private MenuItem multiSelectMenuItem = null;
+
+    private boolean hasTimeRange = false;
+
+    private EditText momentEditText;
+    private Button saveButton;
+    private ListView momentsListView;
+
+    private Button addTagButton;
+    private ChipGroup tagChipGroup;
+    private List<Tag> selectedTags = new ArrayList<>(); // 新增数据状态
+
+    private Calendar startCalendar = Calendar.getInstance();
+    private Calendar endCalendar = Calendar.getInstance();
+
+    // 添加dialog作为成员变量
+    private AlertDialog tagSelectionDialog;
+
+    private SimpleCursorAdapter noteListAdapter;
+
+    // 新增视图引用
+    private TextView startTimeText;
+    private TextView endTimeText;
+    private TimePickerDialog startTimeDialog;
+    private TimePickerDialog endTimeDialog;
+    private SimpleDateFormat timeFormat;
     // 添加花费输入框
     private EditText costEditText;
-    private boolean showCost = true; // 默认显示花费
+
+    // 添加项目管理器
+    private ProjectContextManager projectManager;
+    private NoteDbHelper dbHelper;
 
     // 添加通知助手
     private NotificationHelper notificationHelper;
@@ -138,11 +130,6 @@ public class MainActivity extends AppCompatActivity {
     // 添加成员变量来存储待导入的文件信息
     private Uri pendingImportUri = null;
     private String pendingImportFormat = null;
-
-    // 添加多选相关的成员变量
-    private boolean isMultiSelectMode = false;
-    private Set<Long> selectedNoteIds = new HashSet<>();
-    private MenuItem multiSelectMenuItem = null;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -155,7 +142,6 @@ public class MainActivity extends AppCompatActivity {
 
         // 初始化项目管理器
         projectManager = new ProjectContextManager(this);
-        
         // 获取当前项目的数据库Helper
         dbHelper = projectManager.getCurrentDbHelper();
         
@@ -188,6 +174,9 @@ public class MainActivity extends AppCompatActivity {
 
         // 初始化花费输入框
         costEditText = findViewById(R.id.costEditText);
+
+        // 加载设置配置
+        loadSettings();
 
         // 加载现有记录
         loadMoments();
@@ -302,7 +291,7 @@ public class MainActivity extends AppCompatActivity {
         final Cursor tagsCursor = dbHelper.getAllTags();
         
         // 简化适配器代码，避免使用bindView
-        final SimpleCursorAdapter adapter = new SimpleCursorAdapter(
+        final SimpleCursorAdapter tagAdapter = new SimpleCursorAdapter(
                 this, 
                 R.layout.tag_list_item, 
                 tagsCursor,
@@ -311,7 +300,7 @@ public class MainActivity extends AppCompatActivity {
                 0);
         
         // 使用单独的ViewBinder来处理颜色视图
-        adapter.setViewBinder((view, cursor, columnIndex) -> {
+        tagAdapter.setViewBinder((view, cursor, columnIndex) -> {
             // 只处理tagNameText的绑定，颜色视图单独处理
             if (view.getId() == R.id.tagNameText) {
                 String tagName = cursor.getString(columnIndex);
@@ -322,12 +311,12 @@ public class MainActivity extends AppCompatActivity {
         });
         
         // 设置适配器
-        listViewTags.setAdapter(adapter);
+        listViewTags.setAdapter(tagAdapter);
         
         // 在适配器设置后，遍历所有列表项单独设置颜色
         listViewTags.post(() -> {
-            for (int i = 0; i < adapter.getCount(); i++) {
-                View itemView = adapter.getView(i, null, listViewTags);
+            for (int i = 0; i < tagAdapter.getCount(); i++) {
+                View itemView = tagAdapter.getView(i, null, listViewTags);
                 if (itemView != null) {
                     View colorView = itemView.findViewById(R.id.tagColorView);
                     if (colorView != null) {
@@ -442,6 +431,9 @@ public class MainActivity extends AppCompatActivity {
         } else {
             findViewById(R.id.costContainer).setVisibility(View.VISIBLE);
         }
+        
+        // 加载时间排序设置
+        timeDescOrder = Boolean.parseBoolean(dbHelper.getSetting(NoteDbHelper.KEY_TIME_DESC_ORDER, "true"));
     }
 
     /**
@@ -548,18 +540,23 @@ public class MainActivity extends AppCompatActivity {
      */
     private void loadMoments() {
         SQLiteDatabase db = dbHelper.getReadableDatabase();
+        // 根据设置决定排序方式
+        String orderBy = timeDescOrder ? 
+                NoteDbHelper.COLUMN_TIMESTAMP + " DESC" : 
+                NoteDbHelper.COLUMN_TIMESTAMP + " ASC";
+        
         Cursor cursor = db.query(
                 NoteDbHelper.TABLE_NOTES,
                 new String[]{"_id", NoteDbHelper.COLUMN_CONTENT, NoteDbHelper.COLUMN_TIMESTAMP, NoteDbHelper.COLUMN_COST},
                 null, null, null, null,
-                NoteDbHelper.COLUMN_TIMESTAMP + " DESC"
+                orderBy
         );
 
         // 使用应用中实际存在的资源ID
         String[] from = new String[]{NoteDbHelper.COLUMN_CONTENT, NoteDbHelper.COLUMN_TIMESTAMP};
         int[] to = new int[]{R.id.contentText, R.id.timestampText};
 
-        adapter = new SimpleCursorAdapter(
+        noteListAdapter = new SimpleCursorAdapter(
                 this,
                 R.layout.note_list_item,
                 cursor,
@@ -607,7 +604,7 @@ public class MainActivity extends AppCompatActivity {
         };
 
         // 设置时间戳格式
-        adapter.setViewBinder((view, cursor1, columnIndex) -> {
+        noteListAdapter.setViewBinder((view, cursor1, columnIndex) -> {
             if (columnIndex == cursor1.getColumnIndexOrThrow(NoteDbHelper.COLUMN_TIMESTAMP)) {
                 long timestamp = cursor1.getLong(columnIndex);
                 String formattedDate = formatTimestamp(timestamp);
@@ -617,7 +614,7 @@ public class MainActivity extends AppCompatActivity {
             return false;
         });
 
-        momentsListView.setAdapter(adapter);
+        momentsListView.setAdapter(noteListAdapter);
         
         // 添加点击监听器
         momentsListView.setOnItemClickListener((parent, view, position, id) -> {
@@ -896,7 +893,6 @@ public class MainActivity extends AppCompatActivity {
             exitMultiSelectMode();
             return true;
         }
-        
         return super.onOptionsItemSelected(item);
     }
     
@@ -944,7 +940,6 @@ public class MainActivity extends AppCompatActivity {
                 }
                 displayName += " (默认)";
             }
-            
             menu.add(Menu.NONE, i, Menu.NONE, displayName);
         }
         
@@ -1304,6 +1299,9 @@ public class MainActivity extends AppCompatActivity {
                 runOnUiThread(() -> {
                     updateTitle();
                     clearForm();
+                    
+                    // 重新加载新项目的设置
+                    loadSettings();
                     
                     // 加载数据前更新提示
                     progressDialog.setMessage("正在加载数据...");
@@ -1909,6 +1907,10 @@ public class MainActivity extends AppCompatActivity {
         Switch reminderSwitch = settingsView.findViewById(R.id.switchReminder);
         reminderSwitch.setChecked(ReminderScheduler.isReminderEnabled(this));
         
+        // 初始化时间排序开关
+        Switch timeDescOrderSwitch = settingsView.findViewById(R.id.switchTimeDescOrder);
+        timeDescOrderSwitch.setChecked(timeDescOrder);
+        
         // 保存按钮点击事件处理
         builder.setPositiveButton("保存", (dialog, which) -> {
             // 保存时间范围设置
@@ -1948,6 +1950,16 @@ public class MainActivity extends AppCompatActivity {
             } else {
                 ReminderScheduler.stopReminder(this);
             }
+            
+            // 保存时间排序设置
+            boolean newTimeDescOrder = timeDescOrderSwitch.isChecked();
+            dbHelper.saveSetting(NoteDbHelper.KEY_TIME_DESC_ORDER, String.valueOf(newTimeDescOrder));
+            
+            // 重新加载设置以更新界面
+            loadSettings();
+            
+            // 重新加载列表以应用新的排序设置
+            loadMoments();
             
             Toast.makeText(this, "设置已保存", Toast.LENGTH_SHORT).show();
         });
@@ -2178,6 +2190,9 @@ public class MainActivity extends AppCompatActivity {
                 runOnUiThread(() -> {
                     updateTitle();
                     clearForm();
+                    
+                    // 重新加载新项目的设置
+                    loadSettings();
                     
                     // 开始导入数据
                     if (pendingImportUri != null && pendingImportFormat != null) {
@@ -2525,13 +2540,13 @@ public class MainActivity extends AppCompatActivity {
             selectedNoteIds.clear();
             updateMultiSelectMenu();
             invalidateOptionsMenu(); // 刷新菜单
-            adapter.notifyDataSetChanged(); // 刷新列表显示复选框
+            noteListAdapter.notifyDataSetChanged(); // 刷新列表显示复选框
         } else {
             // 退出多选模式
             selectedNoteIds.clear();
             updateMultiSelectMenu();
             invalidateOptionsMenu(); // 刷新菜单
-            adapter.notifyDataSetChanged(); // 隐藏复选框
+            noteListAdapter.notifyDataSetChanged(); // 隐藏复选框
         }
     }
 
@@ -2543,7 +2558,7 @@ public class MainActivity extends AppCompatActivity {
         selectedNoteIds.clear();
         updateMultiSelectMenu();
         invalidateOptionsMenu(); // 刷新菜单
-        adapter.notifyDataSetChanged(); // 隐藏复选框
+        noteListAdapter.notifyDataSetChanged(); // 隐藏复选框
     }
 
     /**

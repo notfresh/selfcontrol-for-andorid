@@ -1,0 +1,76 @@
+让我查看一下项目管理的相关代码，了解每个项目是否对应不同的数据库：
+
+Read file: app/src/main/java/person/notfresh/noteplus/db/ProjectContextManager.java
+让我继续查看数据库名称的生成逻辑：
+
+Ran tool
+Read file: app/src/main/java/person/notfresh/noteplus/db/ProjectContextManager.java
+让我查看数据库文件的实际存储位置：
+
+Read file: app/src/main/java/person/notfresh/noteplus/db/ProjectContextManager.java
+现在让我查看 `NoteDbHelper` 的构造函数，了解数据库文件的创建：
+
+Read file: app/src/main/java/person/notfresh/noteplus/db/NoteDbHelper.java
+基于代码分析，我可以明确回答你的问题：
+
+## 是的，每个项目对应不同的数据库文件
+
+### 数据库文件命名规则
+
+每个项目都有自己独立的数据库文件，命名规则如下：
+
+```java
+private String getDatabaseName(String projectName) {
+    return "notes_" + projectName.replaceAll("[^a-zA-Z0-9]", "_").toLowerCase() + ".db";
+}
+```
+
+### 具体示例
+
+- **默认项目**：`notes_default.db`
+- **工作项目**：`notes_work.db`
+- **学习项目**：`notes_study.db`
+- **项目名称包含特殊字符**：`notes_my_project.db`（特殊字符会被替换为下划线）
+
+### 数据库文件存储位置
+
+数据库文件存储在Android应用的标准数据库目录中：
+```
+/data/data/person.notfresh.noteplus/databases/
+```
+
+### 每个数据库包含的完整表结构
+
+每个项目的数据库都包含相同的表结构：
+
+1. **notes** - 笔记主表
+2. **tags** - 标签表
+3. **time_ranges** - 时间范围表
+4. **note_tags** - 笔记标签关联表
+5. **settings** - 项目设置表
+
+### 项目管理机制
+
+1. **项目切换**：切换项目时会切换到对应的数据库文件
+2. **数据隔离**：不同项目的数据完全独立，互不影响
+3. **设置独立**：每个项目都有自己的设置配置
+4. **缓存管理**：使用 `dbHelperCache` 缓存不同项目的数据库连接
+
+### 代码中的体现
+
+```java
+// 获取当前项目的数据库Helper
+dbHelper = projectManager.getCurrentDbHelper();
+
+// 获取指定项目的数据库Helper
+NoteDbHelper targetDbHelper = projectManager.getDbHelperForProject(projectName);
+```
+
+### 优势
+
+1. **数据隔离**：不同项目的数据完全独立
+2. **安全性**：一个项目的数据问题不会影响其他项目
+3. **灵活性**：可以为不同项目设置不同的配置
+4. **可维护性**：每个项目的数据可以独立备份、恢复、删除
+
+所以你的理解是正确的，每个项目确实对应不同的数据库文件，这样可以实现项目间的数据完全隔离。
