@@ -3,161 +3,33 @@
 	xmlns:app="http://schemas.android.com/apk/res-auto"
 	android:layout_width="match_parent"
 	android:layout_height="match_parent"
-	android:orientation="vertical">
+	android:orientation="vertical"
+	android:padding="16dp">
 
-	<androidx.appcompat.widget.Toolbar
-		android:id="@+id/toolbar"
-		android:layout_width="match_parent"
-		android:layout_height="?attr/actionBarSize"
-		android:background="?attr/colorPrimary"
-		android:elevation="4dp"
-		android:theme="@style/ThemeOverlay.AppCompat.ActionBar"
-		app:title="时间戳记录" />
-
-	<LinearLayout
+	<TextView
+		android:id="@+id/statusTextView"
 		android:layout_width="match_parent"
 		android:layout_height="wrap_content"
-		android:orientation="horizontal"
-		android:padding="8dp">
+		android:text="专注模式未启动"
+		android:textSize="18sp"
+		android:textStyle="bold"
+		android:gravity="center"
+		android:layout_marginBottom="32dp" />
 
-		<LinearLayout
-			android:layout_width="0dp"
-			android:layout_height="wrap_content"
-			android:layout_weight="1"
-			android:orientation="vertical">
-
-			<EditText
-				android:id="@+id/momentEditText"
-				android:layout_width="match_parent"
-				android:layout_height="wrap_content"
-				android:hint="现在你在做什么?想什么?"
-				android:inputType="textMultiLine"
-				android:maxLines="3"
-				android:minLines="1"
-				android:padding="12dp" />
-		</LinearLayout>
-
-		<ImageButton
-			android:id="@+id/expandButton"
-			android:layout_width="32dp"
-			android:layout_height="32dp"
-			android:layout_gravity="top"
-			android:layout_marginStart="4dp"
-			android:layout_marginTop="8dp"
-			android:background="?attr/selectableItemBackgroundBorderless"
-			android:contentDescription="展开/收起输入框"
-			android:src="@drawable/ic_expand"
-			android:alpha="0.6"
-			android:tint="#757575" />
-
-		<Button
-			android:id="@+id/saveButton"
-			android:layout_width="wrap_content"
-			android:layout_height="wrap_content"
-			android:layout_marginStart="4dp"
-			android:text="保存" />
-	</LinearLayout>
-
-	<!-- 时间区间布局 -->
-	<LinearLayout
-		android:id="@+id/timeRangeContainer"
+	<Button
+		android:id="@+id/startBlockButton"
 		android:layout_width="match_parent"
 		android:layout_height="wrap_content"
-		android:orientation="vertical"
-		android:padding="8dp">
+		android:text="启动专注模式"
+		android:textSize="16sp"
+		android:layout_marginBottom="16dp" />
 
-		<LinearLayout
-			android:layout_width="match_parent"
-			android:layout_height="wrap_content"
-			android:orientation="horizontal">
-
-			<TextView
-				android:layout_width="wrap_content"
-				android:layout_height="wrap_content"
-				android:text="开始: " />
-
-			<TextView
-				android:id="@+id/startTimeText"
-				android:layout_width="0dp"
-				android:layout_height="wrap_content"
-				android:layout_weight="1"
-				android:background="@drawable/simple_background"
-				android:padding="8dp"
-				android:text="点击选择" />
-
-			<TextView
-				android:layout_width="wrap_content"
-				android:layout_height="wrap_content"
-				android:text=" 结束: " />
-
-			<TextView
-				android:id="@+id/endTimeText"
-				android:layout_width="0dp"
-				android:layout_height="wrap_content"
-				android:layout_weight="1"
-				android:background="@drawable/simple_background"
-				android:padding="8dp"
-				android:text="点击选择" />
-		</LinearLayout>
-
-		<!-- 花费输入布局，放在时间区间布局后面 -->
-		<LinearLayout
-			android:id="@+id/costContainer"
-			android:layout_width="match_parent"
-			android:layout_height="wrap_content"
-			android:orientation="horizontal"
-			android:padding="8dp">
-
-			<TextView
-				android:layout_width="wrap_content"
-				android:layout_height="wrap_content"
-				android:text="花费: " />
-
-			<EditText
-				android:id="@+id/costEditText"
-				android:layout_width="0dp"
-				android:layout_height="wrap_content"
-				android:layout_weight="1"
-				android:hint="0.00"
-				android:inputType="numberDecimal"
-				android:background="@drawable/simple_background"
-				android:padding="8dp" />
-
-		</LinearLayout>
-	</LinearLayout>
-
-	<!-- 标签布局 -->
-	<LinearLayout
-		android:id="@+id/tagContainer"
+	<Button
+		android:id="@+id/stopBlockButton"
 		android:layout_width="match_parent"
 		android:layout_height="wrap_content"
-		android:orientation="vertical"
-		android:padding="8dp">
-
-		<!-- 已有标签显示区域 -->
-		<com.google.android.material.chip.ChipGroup
-			android:id="@+id/tagChipGroup"
-			android:layout_width="match_parent"
-			android:layout_height="wrap_content" />
-
-		<!-- 添加标签按钮 -->
-		<Button
-			android:id="@+id/addTagButton"
-			android:layout_width="wrap_content"
-			android:layout_height="40dp"
-			android:layout_marginTop="4dp"
-			android:text="添加标签"
-			android:textSize="14sp"
-			android:minWidth="0dp"
-			android:paddingStart="12dp"
-			android:paddingEnd="12dp" />
-	</LinearLayout>
-
-	<ListView
-		android:id="@+id/momentsListView"
-		android:layout_width="match_parent"
-		android:layout_height="match_parent"
-		android:divider="@android:color/darker_gray"
-		android:dividerHeight="1dp" />
+		android:text="停止专注模式"
+		android:textSize="16sp"
+		android:enabled="false" />
 
 </LinearLayout>

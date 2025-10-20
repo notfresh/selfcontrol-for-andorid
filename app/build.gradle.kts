@@ -3,11 +3,11 @@ plugins {
 }
 
 android {
-    namespace = "person.notfresh.noteplus"
+    namespace = "person.notfresh.selfcontrol"
     compileSdk = 34
 
     defaultConfig {
-        applicationId = "person.notfresh.noteplusv2"
+        applicationId = "person.notfresh.selfcontrol"
         minSdk = 29
         targetSdk = 34
         versionCode = 1
