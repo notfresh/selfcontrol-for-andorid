@@ -2,19 +2,28 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
 	xmlns:tools="http://schemas.android.com/tools">
 
-	<uses-permission android:name="android.permission.SYSTEM_ALERT_WINDOW" />
+    <uses-permission android:name="android.permission.KILL_BACKGROUND_PROCESSES" />
+	<uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
+	<uses-permission android:name="android.permission.FOREGROUND_SERVICE_SPECIAL_USE" />
+	<!-- 忽略电池优化，确保应用不被休眠 -->
+	<uses-permission android:name="android.permission.REQUEST_IGNORE_BATTERY_OPTIMIZATIONS" />
+	<!-- 防止应用被系统杀死 -->
+	<uses-permission android:name="android.permission.WAKE_LOCK" />
+	<!-- 获取任务列表权限（用于清除任务栈） -->
+	<uses-permission android:name="android.permission.GET_TASKS" />
+	<uses-permission android:name="android.permission.REORDER_TASKS" />
 
 	<application
 		android:allowBackup="true"
 		android:icon="@mipmap/ic_launcher"
 		android:label="@string/app_name"
 		android:supportsRtl="true"
-		android:theme="@style/Theme.NotePlus"
+		android:theme="@style/Theme.SelfControl"
 		tools:targetApi="31">
 		<activity
-			android:name=".MainActivity"
+			android:name="person.notfresh.selfcontrol.MainActivity"
 			android:exported="true"
-			android:theme="@style/Theme.NotePlus">
+			android:theme="@style/Theme.SelfControl">
 			<intent-filter>
 				<action android:name="android.intent.action.MAIN" />
 				<category android:name="android.intent.category.LAUNCHER" />
@@ -22,9 +31,36 @@
 		</activity>
 		
 		<service 
-		    android:name=".BlockerService" 
+		    android:name="person.notfresh.selfcontrol.service.BlockerService" 
 		    android:enabled="true"
-		    android:exported="false" />
+		    android:exported="false"
+		    android:foregroundServiceType="specialUse">
+		    <property
+		        android:name="android.app.PROPERTY_SPECIAL_USE_FGS_SUBTYPE"
+		        android:value="专注模式服务" />
+		</service>
+		
+		<service
+		    android:name="person.notfresh.selfcontrol.service.BlockerAccessibilityService"
+		    android:permission="android.permission.BIND_ACCESSIBILITY_SERVICE"
+		    android:exported="true">
+		    <intent-filter>
+		        <action android:name="android.accessibilityservice.AccessibilityService" />
+		    </intent-filter>
+		    
+		    <meta-data
+		        android:name="android.accessibilityservice"
+		        android:resource="@xml/accessibility_service_config" />
+		</service>
+		
+		<receiver
+		    android:name="person.notfresh.selfcontrol.receiver.BlockerReceiver"
+		    android:enabled="true"
+		    android:exported="true">
+		    <intent-filter>
+		        <action android:name="person.notfresh.selfcontrol.APP_BLOCKED" />
+		    </intent-filter>
+		</receiver>
 	</application>
 
 </manifest>

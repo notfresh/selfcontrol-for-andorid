@@ -1,3 +1,8 @@
 <resources>
 	<string name="app_name">专注助手</string>
+	<string name="accessibility_service_description">专注助手需要无障碍服务权限来检测前台应用，确保专注模式正常工作</string>
+	<string name="service_notification_title">专注助手运行中</string>
+	<string name="service_notification_content">专注模式已启动，请勿中断</string>
+	<string name="blocked_app_message">检测到%s，专注模式已阻止访问</string>
+	<string name="action_settings">设置</string>
 </resources>
