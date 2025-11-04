@@ -355,11 +355,12 @@ public class BlockerAccessibilityService extends AccessibilityService {
             synchronized (pendingKillProcesses) {
                 pendingKillProcesses.remove(packageName);
             }
-                    return;
-                }
-        
-        // STEP 2: 延迟获取任务ID并清除任务栈
-        // 延迟100ms让任务有时间添加到任务栈（返回桌面后，任务应该已经存在了）
+                return;
+            }
+            
+        // STEP 2: 延迟清除任务栈（使用无障碍服务模拟用户操作）
+        // Android 5.0+ 后无法通过系统API删除其他应用的任务栈
+        // 只能使用无障碍服务模拟用户操作：打开多任务界面 → 找到卡片 → 向右滑动删除
         killProcessHandler.postDelayed(() -> {
             try {
                 Log.d(TAG, "CLEANSTEP 2: Attempting to remove task from recent tasks: " + packageName);
@@ -415,6 +416,20 @@ public class BlockerAccessibilityService extends AccessibilityService {
             }
         }, 800); // 800ms延迟，确保清除任务栈操作完成 
     }
+    
+    
+    /**
+     * 检测是否是小米设备
+     */
+    private boolean isXiaomiDevice() {
+        String manufacturer = android.os.Build.MANUFACTURER.toLowerCase();
+        String brand = android.os.Build.BRAND.toLowerCase();
+        return manufacturer.contains("xiaomi") || 
+               brand.contains("xiaomi") || 
+               manufacturer.contains("redmi") ||
+               brand.contains("redmi");
+    }
+    
 
     /**
      * Show warning message that app is blocked
@@ -431,9 +446,9 @@ public class BlockerAccessibilityService extends AccessibilityService {
             try {
                 Log.d(TAG, "CLEANSTEP Creating Toast message");
                 Toast toast = Toast.makeText(
-                    BlockerAccessibilityService.this,
-                    "专注模式期间，不能打开此应用",
-                    Toast.LENGTH_LONG
+                        BlockerAccessibilityService.this,
+                        "专注模式期间，不能打开此应用",
+                        Toast.LENGTH_LONG
                 );
                 toast.show();
                 Log.d(TAG, "CLEANSTEP Toast shown successfully");
