@@ -30,6 +30,19 @@
 		android:layout_height="wrap_content"
 		android:text="停止专注模式"
 		android:textSize="16sp"
-		android:enabled="false" />
+		android:enabled="false"
+		android:layout_marginBottom="24dp" />
+
+	<TextView
+		android:id="@+id/quoteTextView"
+		android:layout_width="match_parent"
+		android:layout_height="0dp"
+		android:layout_weight="1"
+		android:text=""
+		android:textSize="16sp"
+		android:textColor="#666666"
+		android:gravity="center"
+		android:padding="16dp"
+		android:visibility="gone" />
 
 </LinearLayout>

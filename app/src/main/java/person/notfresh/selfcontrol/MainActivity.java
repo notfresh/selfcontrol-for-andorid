@@ -25,9 +25,30 @@ public class MainActivity extends AppCompatActivity {
     private Button startBlockButton;
     private Button stopBlockButton;
     private TextView statusTextView;
+    private TextView quoteTextView;
     
     // 屏蔽状态
     private boolean isBlocking = false;
+    
+    // 专注名言数组
+    private static final String[] FOCUS_QUOTES = {
+            "与其花许多时间和精力去凿许多浅井，不如花同样的时间和精力去凿一口深井。\n—— 罗曼·罗兰",
+            "聪明人会把凡是分散精力的要求置之度外，只专心致志地去学一门，学一门就要把它学好。\n—— 歌德",
+            "专注和简单一直是我的秘诀之一。简单可能比复杂更难做到：你必须努力厘清思路，从而使其变得简单。但最终这是值得的，因为一旦你做到了，便可以创造奇迹。\n—— 史蒂夫·乔布斯",
+            "获得惊人成就的唯一方法是专注和简化。\n—— 亨利·福特",
+            "性痴则其志凝。故书痴者文必工，艺痴者技必良。\n—— 蒲松龄",
+            "当你全心全意地想做一件事时，整个宇宙都会协同起来帮助你完成。\n—— 保罗·柯艾略 《炼金术士》",
+            "只要专注于某一项事业，就一定会作出使自己感到吃惊的成绩来。\n—— 马克·吐温",
+            "最大的敌人不是别人，正是你缺少专注、摇摆不定的心。",
+            "一个人应该总是专注于他正在做的事情。当你在太阳下行走时，你不会想要点蜡烛。\n—— 史怀哲",
+            "无论做什么事，都要用全部的精力和注意力去做。\n—— 西塞罗",
+            "一生做好一件事。\n—— 黄永玉（中国艺术家）",
+            "非淡泊无以明志，非宁静无以致远。\n—— 诸葛亮",
+            "专注力是一种新的智商。\n—— 丹尼尔·戈尔曼（情商之父）",
+            "多任务处理是一个神话。当你同时处理多项任务时，你只是在任务之间快速切换，而且每次切换都有成本。\n—— 戴维·迈耶（心理学家）",
+            "说'不'意味着对分散注意力的事情说'不'，以便对聚焦注意力的事情说'是'。\n—— 史蒂夫·乔布斯",
+            "当我写作时，我就像一个忘记了过去和未来的人。\n—— 伊莎贝尔·阿连德"
+    };
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -57,6 +78,7 @@ public class MainActivity extends AppCompatActivity {
             startBlockButton = findViewById(R.id.startBlockButton);
             stopBlockButton = findViewById(R.id.stopBlockButton);
             statusTextView = findViewById(R.id.statusTextView);
+            quoteTextView = findViewById(R.id.quoteTextView);
             
             if (startBlockButton == null) {
                 Log.e("MainActivity", "startBlockButton is null!");
@@ -66,6 +88,9 @@ public class MainActivity extends AppCompatActivity {
             }
             if (statusTextView == null) {
                 Log.e("MainActivity", "statusTextView is null!");
+            }
+            if (quoteTextView == null) {
+                Log.e("MainActivity", "quoteTextView is null!");
             }
             
             startBlockButton.setOnClickListener(v -> {
@@ -295,6 +320,8 @@ public class MainActivity extends AppCompatActivity {
             
             Log.d("MainActivity", "All permissions granted, starting service");
             isBlocking = true;
+            // Show random quote when starting focus mode
+            showRandomQuote();
             updateUI();
             
             Log.d("MainActivity", "Creating service intent...");
@@ -347,14 +374,28 @@ public class MainActivity extends AppCompatActivity {
     }
     
     private void stopBlockingMode() {
-        isBlocking = false;
-        updateUI();
+        // Show confirmation dialog with focus time statistics
+        long currentDuration = BlockerService.getCurrentSessionDuration(this);
+        long totalToday = BlockerService.getTotalFocusTimeToday(this);
         
-        // 停止屏蔽服务
-        Intent serviceIntent = new Intent(this, BlockerService.class);
-        stopService(serviceIntent);
+        String currentDurationText = BlockerService.formatDuration(currentDuration);
+        String totalTodayText = BlockerService.formatDuration(totalToday);
         
-        Toast.makeText(this, "专注模式已停止", Toast.LENGTH_SHORT).show();
+        new android.app.AlertDialog.Builder(this)
+                .setTitle("确定要结束专注模式吗？")
+                .setMessage("本次专注时长：\n" + currentDurationText + "\n\n今日累计时长：\n" + totalTodayText)
+                .setPositiveButton("继续专注", null)
+                .setNegativeButton("结束专注", (dialog, which) -> {
+                    isBlocking = false;
+                    updateUI();
+                    
+                    // 停止屏蔽服务
+                    Intent serviceIntent = new Intent(this, BlockerService.class);
+                    stopService(serviceIntent);
+                    
+                    Toast.makeText(this, "专注模式已停止", Toast.LENGTH_SHORT).show();
+                })
+                .show();
     }
     
     private boolean hasRequiredPermissions() {
@@ -383,10 +424,33 @@ public class MainActivity extends AppCompatActivity {
     
     private void updateUI() {
         if (isBlocking) {
-            statusTextView.setText("专注模式运行中");
+            // Display real-time focus duration
+            long currentDuration = BlockerService.getCurrentSessionDuration(this);
+            long totalToday = BlockerService.getTotalFocusTimeToday(this);
+            
+            String currentDurationText = BlockerService.formatDuration(currentDuration);
+            String totalTodayText = BlockerService.formatDuration(totalToday);
+            
+            StringBuilder statusText = new StringBuilder("专注模式运行中\n\n");
+            statusText.append("本次专注：").append(currentDurationText).append("\n");
+            statusText.append("今日累计：").append(totalTodayText);
+            
+            statusTextView.setText(statusText.toString());
             startBlockButton.setEnabled(false);
             stopBlockButton.setEnabled(true);
+            
+            // Schedule UI update every second while blocking
+            if (isBlocking) {
+                new android.os.Handler(getMainLooper()).postDelayed(() -> {
+                    if (isBlocking && isServiceRunning()) {
+                        updateUI(); // Refresh UI
+                    }
+                }, 1000);
+            }
         } else {
+            // Hide quote when not blocking
+            quoteTextView.setVisibility(android.view.View.GONE);
+            
             // 显示当前权限状态
             StringBuilder statusText = new StringBuilder("专注模式未启动\n\n权限状态：\n");
             
@@ -408,6 +472,18 @@ public class MainActivity extends AppCompatActivity {
             statusTextView.setText(statusText.toString());
             startBlockButton.setEnabled(hasRequiredPermissions());
             stopBlockButton.setEnabled(false);
+        }
+    }
+    
+    /**
+     * Show a random focus quote
+     */
+    private void showRandomQuote() {
+        if (quoteTextView != null && FOCUS_QUOTES.length > 0) {
+            java.util.Random random = new java.util.Random();
+            int randomIndex = random.nextInt(FOCUS_QUOTES.length);
+            quoteTextView.setText(FOCUS_QUOTES[randomIndex]);
+            quoteTextView.setVisibility(android.view.View.VISIBLE);
         }
     }
 

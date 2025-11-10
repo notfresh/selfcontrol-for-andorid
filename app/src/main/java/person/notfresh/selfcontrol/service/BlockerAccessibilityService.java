@@ -29,7 +29,8 @@ public class BlockerAccessibilityService extends AccessibilityService {
             "com.netease.newsreader.activity", // 网易新闻
             "com.jingdong.app.mall",    // 京东
             "com.taobao.taobao",        // 淘宝
-            "com.sankuai.meituan"       // 美团
+            "com.sankuai.meituan",      // 美团
+            "com.xingin.xhs"            // 小红书
     };
     
     // Self package name (cached for performance)
