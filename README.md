@@ -100,13 +100,29 @@
   <img src="images/权限-2-无障碍.3.jpg" alt="无障碍服务设置-3" style="max-width: 30%; min-width: 200px; height: auto;" />
 </div>
 
+一般走到这，你的系统可能会提示一个看起来很危险的警告！！
+
+比如我我使用的小米的HyperOS，会这么提示：
+<div style="display: flex; flex-wrap: wrap; gap: 10px; justify-content: center;">
+  <img src="images/权限-2-无障碍.4.jpg" alt="无障碍服务设置-3" style="max-width: 30%; min-width: 200px; height: auto;" />
+</div>
+
+继续勾上就行，担心安全的话，自己阅读源码，自行编译和安装，咱只能帮你到这啦~~~哈哈
+
 ### 3. 无障碍服务被屏蔽提示
+
+每次进这个应用，都需要手动开一次无障碍权限，我目前还不知道为啥，可能是系统为了安全吧！  
+
+所以，给这个应用开多了，就会被系统警告，然后就无法打开无障碍权限了，可以试试第二张图的办法：
 
 <div style="display: flex; flex-wrap: wrap; gap: 10px; justify-content: center;">
   <img src="images/权限-2-无障碍.被屏蔽.1.jpg" alt="无障碍服务被屏蔽-1" style="max-width: 30%; min-width: 200px; height: auto;" />
   <img src="images/权限-2-无障碍.被屏蔽.2.jpg" alt="无障碍服务被屏蔽-2" style="max-width: 30%; min-width: 200px; height: auto;" />
 </div>
 
+把最下方的 “允许受限制的设置” 勾上就可以继续使用了。
+
+本应用还没有上架（挺麻烦的），请介意安全和隐私的非技术党耐心等候，我会尽快完成上架工作~~
 
 
 ## 工作原理
