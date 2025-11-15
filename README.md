@@ -4,6 +4,15 @@
 
 专注助手是一款帮助用户提升专注力、减少手机依赖的自律应用。通过检测并阻止访问指定的应用（如微信、抖音、小红书等），帮助用户在工作、学习时保持专注，培养良好的数字生活习惯。
 
+
+## 界面展示
+
+<div style="display: flex; flex-wrap: wrap; gap: 10px; justify-content: center;">
+  <img src="images/首页-未启动.jpg" alt="首页-未启动" style="max-width: 30%; min-width: 200px; height: auto;" />
+  <img src="images/首页-专注中.jpg" alt="首页-专注中" style="max-width: 30%; min-width: 200px; height: auto;" />
+  <img src="images/首页-结束专注.jpg" alt="首页-结束专注" style="max-width: 30%; min-width: 200px; height: auto;" />
+</div>
+
 ## 主要功能
 
 ### 专注模式
@@ -30,6 +39,9 @@
 ## 被屏蔽的应用列表
 
 默认屏蔽以下应用：
+
+目前是写死了，需要屏蔽其他应用，请联系开发者增加名单~！！！
+
 - 微信 (com.tencent.mm)
 - QQ (com.tencent.mobileqq)
 - 微博 (com.sina.weibo)
