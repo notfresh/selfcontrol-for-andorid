@@ -2,7 +2,19 @@
 
 ## 应用概述
 
-专注助手是一款帮助用户提升专注力、减少手机依赖的自律应用。通过检测并阻止访问指定的应用（如微信、抖音、小红书等），帮助用户在工作、学习时保持专注，培养良好的数字生活习惯。
+专注助手是一款帮助用户提升专注力、减少手机依赖的自律应用。
+
+本应用在于阻断习惯性刷手机的问题，而无法强制不使用手机中的某些应用， 也就是一个强制提醒。
+
+手机重度上瘾者请选择使用更加强烈的彻底锁机App或者物理戒断。  
+
+通过检测并阻止访问指定的应用（如微信、抖音、小红书等），帮助用户在工作、学习时保持专注，培养良好的数字生活习惯。
+
+本应用需要电池免优化的权限，因为智能手机的一般应用会默认被休眠，本应用需要驻留后台。
+
+本应用需要无障碍模式全权限来关闭应用，此权限一般为大多数自律应用所必须，因此可能会被某些手机弹窗警告隐私问题。下文解释了原因。
+
+本应用程序源码公开，使用免费，担心安全问题可以自行阅读源码并且编译安装。
 
 
 ## 界面展示
@@ -71,6 +83,31 @@
 - 专注模式启动后，被屏蔽的应用将无法正常使用
 - 建议在开始专注前关闭不必要的应用
 - 如需修改被屏蔽的应用列表，需要修改代码中的 `BLOCKED_PACKAGES` 数组
+
+## 权限设置
+
+### 1. 电池优化设置
+
+<div style="display: flex; flex-wrap: wrap; gap: 10px; justify-content: center;">
+  <img src="images/权限-1-耗电.jpg" alt="电池优化设置" style="max-width: 30%; min-width: 200px; height: auto;" />
+</div>
+
+### 2. 无障碍服务设置
+
+<div style="display: flex; flex-wrap: wrap; gap: 10px; justify-content: center;">
+  <img src="images/权限-2-无障碍.1.jpg" alt="无障碍服务设置-1" style="max-width: 30%; min-width: 200px; height: auto;" />
+  <img src="images/权限-2-无障碍.2.jpg" alt="无障碍服务设置-2" style="max-width: 30%; min-width: 200px; height: auto;" />
+  <img src="images/权限-2-无障碍.3.jpg" alt="无障碍服务设置-3" style="max-width: 30%; min-width: 200px; height: auto;" />
+</div>
+
+### 3. 无障碍服务被屏蔽提示
+
+<div style="display: flex; flex-wrap: wrap; gap: 10px; justify-content: center;">
+  <img src="images/权限-2-无障碍.被屏蔽.1.jpg" alt="无障碍服务被屏蔽-1" style="max-width: 30%; min-width: 200px; height: auto;" />
+  <img src="images/权限-2-无障碍.被屏蔽.2.jpg" alt="无障碍服务被屏蔽-2" style="max-width: 30%; min-width: 200px; height: auto;" />
+</div>
+
+
 
 ## 工作原理
 
