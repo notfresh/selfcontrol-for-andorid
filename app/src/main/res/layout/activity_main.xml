@@ -45,4 +45,12 @@
 		android:padding="16dp"
 		android:visibility="gone" />
 
+	<Button
+		android:id="@+id/manualButton"
+		android:layout_width="match_parent"
+		android:layout_height="wrap_content"
+		android:text="使用说明书"
+		android:textSize="16sp"
+		android:layout_marginTop="16dp" />
+
 </LinearLayout>

@@ -10,10 +10,10 @@
         android:fillColor="#FFFFFF"
         android:pathData="M54,54m-46,0a46,46 0 1,1 92,0a46,46 0 1,1 -92,0" />
     
-    <!-- 内圈圆环 -->
+    <!-- 内圈圆环 - 缩小绿色圆圈，接近外框相切 -->
     <path
         android:fillColor="#3DDC84"
-        android:pathData="M54,54m-36,0a36,36 0 1,1 72,0a36,36 0 1,1 -72,0" />
+        android:pathData="M54,54m-44,0a44,44 0 1,1 88,0a44,44 0 1,1 -88,0" />
     
     <!-- 专注图标：眼睛形状 -->
     <path

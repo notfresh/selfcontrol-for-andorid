@@ -3,6 +3,9 @@ package person.notfresh.selfcontrol;
 import android.app.ActivityManager;
 import android.content.Context;
 import android.content.Intent;
+import android.content.SharedPreferences;
+import android.graphics.Color;
+import android.net.Uri;
 import android.os.Build;
 import android.os.Bundle;
 import android.provider.Settings;
@@ -12,6 +15,7 @@ import android.widget.TextView;
 import android.widget.Toast;
 
 import androidx.appcompat.app.AppCompatActivity;
+import androidx.core.content.ContextCompat;
 
 import person.notfresh.selfcontrol.service.BlockerService;
 
@@ -26,9 +30,41 @@ public class MainActivity extends AppCompatActivity {
     private Button stopBlockButton;
     private TextView statusTextView;
     private TextView quoteTextView;
+    private Button manualButton;
     
     // 屏蔽状态
     private boolean isBlocking = false;
+    
+    // 菜单项引用（用于控制显示/隐藏）
+    private android.view.MenuItem themeColorMenuItem;
+    
+    // 主题颜色相关
+    private static final String PREFS_NAME = "AppSettings";
+    private static final String KEY_THEME_COLOR = "theme_color";
+    
+    // 主题颜色配置（颜色值和名称）
+    private static final int[] THEME_COLORS = {
+            R.color.theme_blue_grey,
+            R.color.theme_purple,
+            R.color.theme_blue,
+            R.color.theme_green,
+            R.color.theme_red,
+            R.color.theme_orange,
+            R.color.theme_teal,
+            R.color.theme_cyan,
+            R.color.theme_indigo,
+            R.color.theme_pink,
+            R.color.theme_brown,
+            R.color.theme_grey,
+            
+    };
+    
+    private static final String[] THEME_COLOR_NAMES = {
+            "蓝灰色",
+            "紫色", "蓝色", "绿色", "红色", "橙色",
+            "青色", "天蓝色", "靛蓝色", "粉色", "棕色",
+            "灰色", 
+    };
     
     // 专注名言数组
     private static final String[] FOCUS_QUOTES = {
@@ -79,6 +115,7 @@ public class MainActivity extends AppCompatActivity {
             stopBlockButton = findViewById(R.id.stopBlockButton);
             statusTextView = findViewById(R.id.statusTextView);
             quoteTextView = findViewById(R.id.quoteTextView);
+            manualButton = findViewById(R.id.manualButton);
             
             if (startBlockButton == null) {
                 Log.e("MainActivity", "startBlockButton is null!");
@@ -92,10 +129,24 @@ public class MainActivity extends AppCompatActivity {
             if (quoteTextView == null) {
                 Log.e("MainActivity", "quoteTextView is null!");
             }
+            if (manualButton == null) {
+                Log.e("MainActivity", "manualButton is null!");
+            }
+            
+            // 设置使用说明书按钮点击事件
+            manualButton.setOnClickListener(v -> {
+                Log.d("MainActivity", "Manual button clicked");
+                showManualDialog();
+            });
             
             startBlockButton.setOnClickListener(v -> {
                 Log.d("MainActivity", "Start button clicked");
                 try {
+                    // 如果权限不足，打开权限设置对话框（复用设置按钮的逻辑）
+                    if (!hasRequiredPermissions()) {
+                        showManualPermissionDialog();
+                        return;
+                    }
                     startBlockingMode();
                 } catch (Exception e) {
                     Log.e("MainActivity", "Error in startBlockingMode", e);
@@ -111,6 +162,9 @@ public class MainActivity extends AppCompatActivity {
                     e.printStackTrace();
                 }
             });
+            
+            // Apply saved theme color
+            applyThemeColor();
             
             updateUI();
             Log.d("MainActivity", "Views initialized successfully");
@@ -131,8 +185,48 @@ public class MainActivity extends AppCompatActivity {
         isBlocking = serviceRunning;
         updateUI();
         
-        // 每次回到前台时检查电池优化状态
-        checkAndRequestBatteryOptimization();
+        // 不再自动弹窗，用户可以通过设置按钮手动检查权限
+        
+        // 更新菜单项可见性
+        invalidateOptionsMenu();
+    }
+    
+    @Override
+    public boolean onCreateOptionsMenu(android.view.Menu menu) {
+        getMenuInflater().inflate(R.menu.menu_main, menu);
+        themeColorMenuItem = menu.findItem(R.id.action_theme_color);
+        updateMenuVisibility();
+        return true;
+    }
+    
+    @Override
+    public boolean onOptionsItemSelected(android.view.MenuItem item) {
+        int id = item.getItemId();
+        if (id == R.id.action_theme_color) {
+            Log.d("MainActivity", "Theme color menu item clicked");
+            showThemeColorDialog();
+            return true;
+        } else if (id == R.id.action_settings) {
+            Log.d("MainActivity", "Settings menu item clicked");
+            // 打开权限设置页面，让用户手动选择要设置的权限
+            showManualPermissionDialog();
+            return true;
+        } else if (id == R.id.action_manual) {
+            Log.d("MainActivity", "Manual menu item clicked");
+            showManualDialog();
+            return true;
+        }
+        return super.onOptionsItemSelected(item);
+    }
+    
+    /**
+     * Update menu item visibility based on blocking state
+     */
+    private void updateMenuVisibility() {
+        if (themeColorMenuItem != null) {
+            // Hide theme color menu item when blocking, show when not blocking
+            themeColorMenuItem.setVisible(!isBlocking);
+        }
     }
     
     @Override
@@ -162,21 +256,206 @@ public class MainActivity extends AppCompatActivity {
     }
 
     private void checkAndRequestPermissions() {
-        // 检查无障碍服务权限
-        checkAccessibilityPermission();
-        // 检查并请求忽略电池优化
-        checkAndRequestBatteryOptimization();
+        // 检查所有权限，每次进入应用都会检查
+        boolean needsAccessibility = !isAccessibilityServiceEnabled();
+        boolean needsBatteryOptimization = Build.VERSION.SDK_INT >= Build.VERSION_CODES.M && 
+                !isBatteryOptimizationIgnored();
+        
+        // 如果所有权限都已授予，直接返回
+        if (!needsAccessibility && !needsBatteryOptimization) {
+            return;
+        }
+        
+        // 构建权限提示消息
+        StringBuilder message = new StringBuilder("请授予以下权限以正常使用应用：\n\n");
+        
+        if (needsAccessibility) {
+            message.append("• 无障碍服务权限\n");
+        }
+        
+        if (needsBatteryOptimization) {
+            message.append("• 忽略电池优化（必需）\n");
+        }
+        
+        message.append("\n您可以点击下方按钮逐个设置权限");
+        
+        // 创建对话框
+        android.app.AlertDialog.Builder builder = new android.app.AlertDialog.Builder(this)
+                .setTitle("缺少必要权限")
+                .setMessage(message.toString());
+        
+        // 根据缺失的权限添加按钮
+        // 按钮顺序：Negative（左） → Neutral（中） → Positive（右）
+        if (needsAccessibility && needsBatteryOptimization) {
+            // 两个权限都缺失，添加三个按钮
+            builder.setNegativeButton("设置无障碍服务", (dialog, which) -> {
+                openAccessibilitySettings();
+            })
+            .setNeutralButton("设置电池优化", (dialog, which) -> {
+                openBatteryOptimizationSettings();
+            })
+            .setPositiveButton("稍后", null);
+        } else if (needsAccessibility) {
+            // 只缺无障碍服务
+            builder.setNegativeButton("前往设置", (dialog, which) -> {
+                openAccessibilitySettings();
+            })
+            .setPositiveButton("稍后", null);
+        } else if (needsBatteryOptimization) {
+            // 只缺电池优化
+            builder.setNegativeButton("前往设置", (dialog, which) -> {
+                openBatteryOptimizationSettings();
+            })
+            .setPositiveButton("稍后", null);
+        }
+        
+        android.app.AlertDialog dialog = builder.create();
+        dialog.show();
+        
+        // 设置按钮文字颜色为黑色并加粗（避免被主题颜色影响）
+        int blackColor = ContextCompat.getColor(this, R.color.black);
+        android.widget.Button positiveButton = dialog.getButton(android.app.AlertDialog.BUTTON_POSITIVE);
+        android.widget.Button negativeButton = dialog.getButton(android.app.AlertDialog.BUTTON_NEGATIVE);
+        android.widget.Button neutralButton = dialog.getButton(android.app.AlertDialog.BUTTON_NEUTRAL);
+        
+        if (positiveButton != null) {
+            positiveButton.setTextColor(blackColor);
+            positiveButton.setTypeface(null, android.graphics.Typeface.BOLD);
+        }
+        if (negativeButton != null) {
+            negativeButton.setTextColor(blackColor);
+            negativeButton.setTypeface(null, android.graphics.Typeface.BOLD);
+        }
+        if (neutralButton != null) {
+            neutralButton.setTextColor(blackColor);
+            neutralButton.setTypeface(null, android.graphics.Typeface.BOLD);
+        }
+    }
+    
+    /**
+     * 打开无障碍服务设置页面
+     */
+    private void openAccessibilitySettings() {
+        try {
+            Intent intent = new Intent(android.provider.Settings.ACTION_ACCESSIBILITY_SETTINGS);
+            startActivity(intent);
+        } catch (Exception e) {
+            Log.e("MainActivity", "Error opening accessibility settings", e);
+            Toast.makeText(this, "无法打开无障碍服务设置", Toast.LENGTH_SHORT).show();
+        }
+    }
+    
+    /**
+     * 打开电池优化设置页面
+     */
+    private void openBatteryOptimizationSettings() {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+            try {
+                String packageName = getPackageName();
+                Intent intent = new Intent(android.provider.Settings.ACTION_REQUEST_IGNORE_BATTERY_OPTIMIZATIONS);
+                intent.setData(android.net.Uri.parse("package:" + packageName));
+                startActivityForResult(intent, REQUEST_IGNORE_BATTERY_OPTIMIZATIONS);
+            } catch (Exception e) {
+                Log.e("MainActivity", "Error requesting battery optimization", e);
+                // 如果 ACTION_REQUEST_IGNORE_BATTERY_OPTIMIZATIONS 不可用，尝试打开设置页面
+                try {
+                    Intent intent = new Intent(android.provider.Settings.ACTION_IGNORE_BATTERY_OPTIMIZATION_SETTINGS);
+                    startActivity(intent);
+                } catch (Exception e2) {
+                    Log.e("MainActivity", "Error opening battery optimization settings", e2);
+                    Toast.makeText(this, "无法打开电池优化设置", Toast.LENGTH_SHORT).show();
+                }
+            }
+        }
+    }
+    
+    /**
+     * 显示手动权限设置对话框（通过设置按钮打开）
+     * 让用户可以选择要设置的权限
+     */
+    private void showManualPermissionDialog() {
+        boolean needsAccessibility = !isAccessibilityServiceEnabled();
+        boolean needsBatteryOptimization = Build.VERSION.SDK_INT >= Build.VERSION_CODES.M && 
+                !isBatteryOptimizationIgnored();
+        
+        // 如果所有权限都已授予
+        if (!needsAccessibility && !needsBatteryOptimization) {
+            Toast.makeText(this, "所有权限已授予", Toast.LENGTH_SHORT).show();
+            return;
+        }
+        
+        // 构建权限提示消息
+        StringBuilder message = new StringBuilder("请设置以下权限：\n\n");
+        
+        if (needsAccessibility) {
+            message.append("• 无障碍服务权限\n");
+        }
+        
+        if (needsBatteryOptimization) {
+            message.append("• 忽略电池优化（必需）\n");
+        }
+        
+        message.append("\n请选择要设置的权限");
+        
+        // 创建对话框
+        android.app.AlertDialog.Builder builder = new android.app.AlertDialog.Builder(this)
+                .setTitle("权限设置")
+                .setMessage(message.toString());
+        
+        // 根据缺失的权限添加按钮
+        if (needsAccessibility && needsBatteryOptimization) {
+            // 两个权限都缺失，添加三个按钮
+            // 按钮顺序：Negative（左） → Neutral（中） → Positive（右）
+            builder.setNegativeButton("设置无障碍服务", (dialog, which) -> {
+                openAccessibilitySettings();
+            })
+            .setNeutralButton("设置电池优化", (dialog, which) -> {
+                openBatteryOptimizationSettings();
+            })
+            .setPositiveButton("取消", null);
+        } else if (needsAccessibility) {
+            // 只缺无障碍服务
+            builder.setPositiveButton("前往设置", (dialog, which) -> {
+                openAccessibilitySettings();
+            })
+            .setNegativeButton("取消", null);
+        } else if (needsBatteryOptimization) {
+            // 只缺电池优化
+            builder.setPositiveButton("前往设置", (dialog, which) -> {
+                openBatteryOptimizationSettings();
+            })
+            .setNegativeButton("取消", null);
+        }
+        
+        android.app.AlertDialog dialog = builder.create();
+        dialog.show();
+        
+        // 设置按钮文字颜色为黑色并加粗（避免被主题颜色影响）
+        int blackColor = ContextCompat.getColor(this, R.color.black);
+        android.widget.Button positiveButton = dialog.getButton(android.app.AlertDialog.BUTTON_POSITIVE);
+        android.widget.Button negativeButton = dialog.getButton(android.app.AlertDialog.BUTTON_NEGATIVE);
+        android.widget.Button neutralButton = dialog.getButton(android.app.AlertDialog.BUTTON_NEUTRAL);
+        
+        if (positiveButton != null) {
+            positiveButton.setTextColor(blackColor);
+            positiveButton.setTypeface(null, android.graphics.Typeface.BOLD);
+        }
+        if (negativeButton != null) {
+            negativeButton.setTextColor(blackColor);
+            negativeButton.setTypeface(null, android.graphics.Typeface.BOLD);
+        }
+        if (neutralButton != null) {
+            neutralButton.setTextColor(blackColor);
+            neutralButton.setTypeface(null, android.graphics.Typeface.BOLD);
+        }
     }
     
     private void checkAccessibilityPermission() {
         // 检查无障碍服务是否已启用
+        // 不再自动跳转，只检查状态，用户可以通过设置按钮手动跳转
         if (!isAccessibilityServiceEnabled()) {
-            // 显示提示信息并引导用户开启
-            Toast.makeText(this, "请前往设置开启无障碍服务权限", Toast.LENGTH_LONG).show();
-            
-            // 引导用户到无障碍服务设置页面
-            Intent intent = new Intent(android.provider.Settings.ACTION_ACCESSIBILITY_SETTINGS);
-            startActivity(intent);
+            // 只显示提示信息，不自动跳转
+            Log.d("MainActivity", "Accessibility service is not enabled");
         }
     }
     
@@ -324,6 +603,9 @@ public class MainActivity extends AppCompatActivity {
             showRandomQuote();
             updateUI();
             
+            // Update menu visibility
+            invalidateOptionsMenu();
+            
             Log.d("MainActivity", "Creating service intent...");
             // Start blocking service
             Intent serviceIntent = new Intent(this, BlockerService.class);
@@ -389,6 +671,9 @@ public class MainActivity extends AppCompatActivity {
                     isBlocking = false;
                     updateUI();
                     
+                    // Update menu visibility
+                    invalidateOptionsMenu();
+                    
                     // 停止屏蔽服务
                     Intent serviceIntent = new Intent(this, BlockerService.class);
                     stopService(serviceIntent);
@@ -436,8 +721,17 @@ public class MainActivity extends AppCompatActivity {
             statusText.append("今日累计：").append(totalTodayText);
             
             statusTextView.setText(statusText.toString());
-            startBlockButton.setEnabled(false);
+            
+            // Hide start and theme buttons, show stop button when blocking
+            startBlockButton.setVisibility(android.view.View.GONE);
+            stopBlockButton.setVisibility(android.view.View.VISIBLE);
             stopBlockButton.setEnabled(true);
+            
+            // Hide manual button when blocking
+            manualButton.setVisibility(android.view.View.GONE);
+            
+            // Hide theme color menu item
+            updateMenuVisibility();
             
             // Schedule UI update every second while blocking
             if (isBlocking) {
@@ -448,6 +742,16 @@ public class MainActivity extends AppCompatActivity {
                 }, 1000);
             }
         } else {
+            // Show start and theme buttons, hide stop button when not blocking
+            startBlockButton.setVisibility(android.view.View.VISIBLE);
+            stopBlockButton.setVisibility(android.view.View.GONE);
+            
+            // Show manual button when not blocking
+            manualButton.setVisibility(android.view.View.VISIBLE);
+            
+            // Show theme color menu item
+            updateMenuVisibility();
+            
             // Hide quote when not blocking
             quoteTextView.setVisibility(android.view.View.GONE);
             
@@ -470,8 +774,28 @@ public class MainActivity extends AppCompatActivity {
             }
             
             statusTextView.setText(statusText.toString());
-            startBlockButton.setEnabled(hasRequiredPermissions());
-            stopBlockButton.setEnabled(false);
+            
+            // 设置按钮的颜色（按钮始终启用，点击事件中会处理权限检查）
+            boolean hasPermissions = hasRequiredPermissions();
+            // 按钮始终启用，这样即使权限不足也可以点击，点击时会弹出权限设置对话框
+            startBlockButton.setEnabled(true);
+            
+            // 如果权限不足，设置启动按钮为灰色（视觉提示）
+            if (!hasPermissions) {
+                int grayColor = ContextCompat.getColor(this, android.R.color.darker_gray);
+                startBlockButton.setBackgroundColor(grayColor);
+                startBlockButton.setTextColor(Color.WHITE);
+            } else {
+                // 如果有权限，应用主题颜色到启动按钮
+                int colorIndex = getSavedThemeColorIndex();
+                if (colorIndex < 0 || colorIndex >= THEME_COLORS.length) {
+                    colorIndex = 10; // Fallback to default grey
+                }
+                int colorResId = THEME_COLORS[colorIndex];
+                int colorValue = ContextCompat.getColor(this, colorResId);
+                startBlockButton.setBackgroundColor(colorValue);
+                startBlockButton.setTextColor(Color.WHITE);
+            }
         }
     }
     
@@ -484,6 +808,148 @@ public class MainActivity extends AppCompatActivity {
             int randomIndex = random.nextInt(FOCUS_QUOTES.length);
             quoteTextView.setText(FOCUS_QUOTES[randomIndex]);
             quoteTextView.setVisibility(android.view.View.VISIBLE);
+        }
+    }
+    
+    /**
+     * Show theme color selection dialog
+     */
+    private void showThemeColorDialog() {
+        android.app.AlertDialog.Builder builder = new android.app.AlertDialog.Builder(this);
+        builder.setTitle("选择主题颜色");
+        
+        // Create color items for dialog
+        String[] items = new String[THEME_COLOR_NAMES.length];
+        for (int i = 0; i < THEME_COLOR_NAMES.length; i++) {
+            items[i] = THEME_COLOR_NAMES[i];
+        }
+        
+        builder.setItems(items, (dialog, which) -> {
+            saveThemeColor(which);
+            applyThemeColor();
+            Toast.makeText(this, "主题颜色已更改为：" + THEME_COLOR_NAMES[which], Toast.LENGTH_SHORT).show();
+        });
+        
+        builder.show();
+    }
+    
+    /**
+     * Save selected theme color index
+     */
+    private void saveThemeColor(int colorIndex) {
+        SharedPreferences prefs = getSharedPreferences(PREFS_NAME, MODE_PRIVATE);
+        prefs.edit().putInt(KEY_THEME_COLOR, colorIndex).apply();
+    }
+    
+    /**
+     * Get saved theme color index
+     */
+    private int getSavedThemeColorIndex() {
+        SharedPreferences prefs = getSharedPreferences(PREFS_NAME, MODE_PRIVATE);
+        return prefs.getInt(KEY_THEME_COLOR, 10); // Default to grey (index 10)
+    }
+    
+    /**
+     * Apply theme color to UI elements
+     */
+    private void applyThemeColor() {
+        int colorIndex = getSavedThemeColorIndex();
+        if (colorIndex < 0 || colorIndex >= THEME_COLORS.length) {
+            colorIndex = 10; // Fallback to default grey
+        }
+        
+        int colorResId = THEME_COLORS[colorIndex];
+        int colorValue = ContextCompat.getColor(this, colorResId);
+        
+        // Apply to buttons (only if permissions are granted for start button)
+        if (startBlockButton != null && hasRequiredPermissions()) {
+            startBlockButton.setBackgroundColor(colorValue);
+            startBlockButton.setTextColor(Color.WHITE);
+        }
+        if (stopBlockButton != null) {
+            stopBlockButton.setBackgroundColor(colorValue);
+            stopBlockButton.setTextColor(Color.WHITE);
+        }
+        if (manualButton != null) {
+            manualButton.setBackgroundColor(colorValue);
+            manualButton.setTextColor(Color.WHITE);
+        }
+        
+        // Apply to ActionBar/Toolbar (顶部标题栏)
+        if (getSupportActionBar() != null) {
+            getSupportActionBar().setBackgroundDrawable(new android.graphics.drawable.ColorDrawable(colorValue));
+        }
+        
+        // Apply to status bar (Android 5.0+)
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
+            getWindow().setStatusBarColor(colorValue);
+        }
+    }
+    
+    /**
+     * Show manual dialog with Gitee and GitHub options
+     */
+    private void showManualDialog() {
+        // 创建自定义布局视图
+        android.view.LayoutInflater inflater = getLayoutInflater();
+        android.view.View dialogView = inflater.inflate(R.layout.dialog_manual, null);
+        
+        // 创建对话框
+        android.app.AlertDialog dialog = new android.app.AlertDialog.Builder(this)
+                .setView(dialogView)
+                .create();
+        
+        // 获取按钮引用
+        Button btnGitee = dialogView.findViewById(R.id.btnGitee);
+        Button btnGitHub = dialogView.findViewById(R.id.btnGitHub);
+        Button btnCancel = dialogView.findViewById(R.id.btnCancel);
+        
+        // 设置按钮文字颜色为黑色
+        int blackColor = ContextCompat.getColor(this, R.color.black);
+        btnGitee.setTextColor(blackColor);
+        btnGitHub.setTextColor(blackColor);
+        btnCancel.setTextColor(blackColor);
+        
+        // 明确设置按钮背景，确保使用黑色边框（避免被主题颜色覆盖）
+        android.graphics.drawable.Drawable borderDrawable = ContextCompat.getDrawable(this, R.drawable.button_border_black);
+        btnGitee.setBackground(borderDrawable);
+        btnGitHub.setBackground(borderDrawable);
+        btnCancel.setBackground(borderDrawable);
+        
+        // 禁用主题颜色对按钮的影响（Material Components Button 可能会应用主题颜色）
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
+            btnGitee.setBackgroundTintList(null);
+            btnGitHub.setBackgroundTintList(null);
+            btnCancel.setBackgroundTintList(null);
+        }
+        
+        // 设置按钮点击事件
+        btnGitee.setOnClickListener(v -> {
+            dialog.dismiss();
+            openUrl("https://gitee.com/notfresh/selfcontrol-for-andorid");
+        });
+        
+        btnGitHub.setOnClickListener(v -> {
+            dialog.dismiss();
+            openUrl("https://github.com/notfresh/selfcontrol-for-andorid");
+        });
+        
+        btnCancel.setOnClickListener(v -> dialog.dismiss());
+        
+        // 显示对话框
+        dialog.show();
+    }
+    
+    /**
+     * Open URL in browser
+     */
+    private void openUrl(String url) {
+        try {
+            Intent intent = new Intent(Intent.ACTION_VIEW, Uri.parse(url));
+            startActivity(intent);
+        } catch (Exception e) {
+            Log.e("MainActivity", "Error opening URL: " + url, e);
+            Toast.makeText(this, "无法打开链接：" + e.getMessage(), Toast.LENGTH_SHORT).show();
         }
     }
 

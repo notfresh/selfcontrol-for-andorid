@@ -1,0 +1,57 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:orientation="vertical"
+    android:padding="24dp">
+
+    <TextView
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="使用说明书"
+        android:textSize="20sp"
+        android:textStyle="bold"
+        android:gravity="center"
+        android:layout_marginBottom="16dp" />
+
+    <TextView
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="选择查看说明书的平台："
+        android:textSize="16sp"
+        android:layout_marginBottom="24dp" />
+
+    <Button
+        android:id="@+id/btnGitee"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="Gitee（推荐，国内访问更快）"
+        android:textSize="16sp"
+        android:textColor="@color/black"
+        android:background="@drawable/button_border_black"
+        android:layout_marginBottom="12dp"
+        android:padding="16dp" />
+
+    <Button
+        android:id="@+id/btnGitHub"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="GitHub"
+        android:textSize="16sp"
+        android:textColor="@color/black"
+        android:background="@drawable/button_border_black"
+        android:layout_marginBottom="12dp"
+        android:padding="16dp" />
+
+    <Button
+        android:id="@+id/btnCancel"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="取消"
+        android:textSize="16sp"
+        android:textColor="@color/black"
+        android:background="@drawable/button_border_black"
+        android:padding="16dp" />
+
+</LinearLayout>
+

@@ -14,4 +14,18 @@
     <color name="focus_background">#8000FF00</color>
     <color name="focus_text">#FFFFFFFF</color>
     <color name="focus_button">#FF4CAF50</color>
+    
+    <!-- 低饱和度主题颜色 -->
+    <color name="theme_purple">#FF9C88FF</color>
+    <color name="theme_blue">#FF6B9BD1</color>
+    <color name="theme_green">#FF7CB342</color>
+    <color name="theme_red">#FFE57373</color>
+    <color name="theme_orange">#FFFFB74D</color>
+    <color name="theme_teal">#FF4DB6AC</color>
+    <color name="theme_cyan">#FF4DD0E1</color>
+    <color name="theme_indigo">#FF7986CB</color>
+    <color name="theme_pink">#FFF48FB1</color>
+    <color name="theme_brown">#FFA1887F</color>
+    <color name="theme_grey">#FF90A4AE</color>
+    <color name="theme_blue_grey">#FF78909C</color>
 </resources>
